@@ -1,0 +1,46 @@
+<section #root class="project-showcase">
+  @for (project of projects; track project.titulo; let i = $index) {
+    <ng-container>
+      <div class="project-showcase__hero">
+        @if (project.videoPortada.type === 'video') {
+          <video class="project-showcase__media" [src]="project.videoPortada.src" autoplay muted loop playsinline preload="auto"></video>
+        } @else {
+          <img class="project-showcase__media" [src]="project.videoPortada.src" [alt]="project.titulo" loading="eager" decoding="async" />
+        }
+      </div>
+
+      <div class="project-showcase__text" [class.project-showcase__text--mirror]="i % 2 === 1">
+        <h2 class="project-showcase__title">{{ project.titulo }}</h2>
+        <p class="project-showcase__subtitle">{{ project.subtitulo }}</p>
+        <p class="project-showcase__description">{{ project.descripcion }}</p>
+      </div>
+
+      <div
+        class="project-showcase__card project-showcase__card--primary"
+        [class.project-showcase__card--mirror]="i % 2 === 1"
+      >
+        @if (project.mediaSecundaria1.type === 'video') {
+          <video class="project-showcase__media" [src]="project.mediaSecundaria1.src" autoplay muted loop playsinline preload="metadata"></video>
+        } @else {
+          <img class="project-showcase__media" [src]="project.mediaSecundaria1.src" [alt]="project.titulo" loading="lazy" decoding="async" />
+        }
+        <span class="project-showcase__expand-icon" aria-hidden="true">⤢</span>
+      </div>
+
+      <div
+        class="project-showcase__card project-showcase__card--secondary"
+        [class.project-showcase__card--mirror]="i % 2 === 1"
+      >
+        @if (project.mediaSecundaria2.type === 'video') {
+          <video class="project-showcase__media" [src]="project.mediaSecundaria2.src" autoplay muted loop playsinline preload="metadata"></video>
+        } @else {
+          <img class="project-showcase__media" [src]="project.mediaSecundaria2.src" [alt]="project.titulo" loading="lazy" decoding="async" />
+        }
+      </div>
+
+      <div class="project-showcase__quote">
+        <p>«{{ project.quote }}»</p>
+      </div>
+    </ng-container>
+  }
+</section>

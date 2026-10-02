@@ -1,0 +1,168 @@
+@use '../../../styles.scss' as *;
+
+// Solo necesita altura para que el pin tenga algo que medir de entrada; todo
+// el contenido real vive en capas position:fixed apiladas encima (mismo
+// truco que #section-2..5 en index.scss: un único pin, varias "escenas"
+// controladas por opacidad).
+.project-showcase {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  background-color: $bg-color;
+  color: white;
+  font-family: $font-montserrat;
+}
+
+.project-showcase__hero {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  background-color: $bg-color;
+}
+
+.project-showcase__media {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.project-showcase__text {
+  position: fixed;
+  top: 50%;
+  left: 4vw;
+  width: min(36vw, 520px);
+  transform: translateY(-50%);
+  z-index: 3;
+
+  &--mirror {
+    left: auto;
+    right: 4vw;
+  }
+}
+
+.project-showcase__title {
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 1.05;
+  margin: 0 0 0.75rem;
+}
+
+.project-showcase__subtitle {
+  color: $color-accent-pink;
+  font-size: clamp(1rem, 1.4vw, 1.25rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 1rem;
+}
+
+.project-showcase__description {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: clamp(0.95rem, 1.1vw, 1.1rem);
+  line-height: 1.6;
+  max-width: 46ch;
+  margin: 0;
+}
+
+.project-showcase__card {
+  position: fixed;
+  right: 4vw;
+  width: 42vw;
+  overflow: hidden;
+  border-radius: 20px;
+  z-index: 2;
+  will-change: transform;
+
+  &--primary {
+    top: 6vh;
+    height: 43vh;
+  }
+
+  &--secondary {
+    top: 51vh;
+    height: 43vh;
+  }
+
+  &--mirror {
+    right: auto;
+    left: 4vw;
+  }
+}
+
+.project-showcase__expand-icon {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  font-size: 1.1rem;
+  pointer-events: none;
+}
+
+.project-showcase__quote {
+  position: fixed;
+  left: 4vw;
+  bottom: 6vh;
+  max-width: min(52vw, 640px);
+  z-index: 6;
+
+  p {
+    margin: 0;
+    font-size: clamp(1.4rem, 2.6vw, 2.4rem);
+    font-weight: 700;
+    text-transform: uppercase;
+    line-height: 1.2;
+    text-shadow: 0 2px 16px rgba(0, 0, 0, 0.6);
+  }
+}
+
+@media (max-width: 768px) {
+  .project-showcase__text {
+    top: auto;
+    bottom: 32vh;
+    left: 4vw;
+    right: 4vw;
+    width: auto;
+    transform: translateY(0);
+
+    &--mirror {
+      left: 4vw;
+      right: 4vw;
+    }
+  }
+
+  .project-showcase__card {
+    left: 4vw;
+    right: 4vw;
+    width: auto;
+
+    &--primary {
+      top: auto;
+      bottom: 16vh;
+      height: 14vh;
+    }
+
+    &--secondary {
+      top: auto;
+      bottom: 1vh;
+      height: 14vh;
+    }
+
+    &--mirror {
+      left: 4vw;
+      right: 4vw;
+    }
+  }
+
+  .project-showcase__quote {
+    left: 4vw;
+    right: 4vw;
+    max-width: none;
+  }
+}

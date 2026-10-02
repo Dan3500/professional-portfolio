@@ -1,0 +1,64 @@
+@font-face {
+  font-family: 'Montserrat';
+  src: url('/assets/fonts/Montserrat/static/Montserrat-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Montserrat';
+  src: url('/assets/fonts/Montserrat/static/Montserrat-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Montserrat';
+  src: url('/assets/fonts/Montserrat/static/Montserrat-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Montserrat';
+  src: url('/assets/fonts/Montserrat/static/Montserrat-BoldItalic.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+}
+
+$color-primary: #1d95ff;     // azul principal
+$color-primary-light: #93c5fd; // azul claro
+$color-primary-bold: #1e40af;  // azul índigo oscuro
+$color-secondary: #22d3ee;   // cyan-teal (verde ajustado al azul)
+$color-tertiary: #34d399;    // esmeralda fresca
+$color-quaternary: #e0f2fe;  // azul muy claro (fallback/texto)
+$color-accent-pink: #ff3d7f; // acento rosa, solo para la sección de project-showcase
+$bg-color: #111318;
+
+$font-montserrat: 'Montserrat', sans-serif;
+$font-montserrat-regular: 'Montserrat', sans-serif;
+$font-montserrat-bold: 'Montserrat', sans-serif;
+$font-montserrat-bold-italic: 'Montserrat-BoldItalic', 'Montserrat', sans-serif;
+
+html, body {
+     margin: 0 !important;
+    padding: 0 !important; 
+    background-color: $bg-color;
+}
+
+/* Scrollbar estilos modernos para todos los navegadores */
+/* Chrome, Edge, Safari */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: $color-primary;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: $color-primary transparent;
+}

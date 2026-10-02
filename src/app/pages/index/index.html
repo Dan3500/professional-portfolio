@@ -1,0 +1,201 @@
+<!-- #mask va fuera de .app-container: el pin de GSAP le deja un transform residual que rompería los position:fixed de dentro -->
+<div class="mask" id="mask">
+    <section id="introduction" class="intro-section">
+            <canvas #particlesCanvas id="particles-canvas"></canvas>
+            <div class="intro-content">
+                    <h1>
+                        <span #typedText class="typed-text"></span>
+                        <span class="cursor">|</span>
+                    </h1>
+                    <div #introAvatar class="intro-avatar">
+                        <img src="assets/img/avatar.jpg" alt="Daniel Soltero" />
+                    </div>
+            </div>
+            <span #introArrow class="intro-arrow" aria-hidden="true">
+                <span class="intro-arrow__chevron"></span>
+            </span>
+    </section>
+</div>
+
+<div class="app-container px-4 px-md-0" id="app-container">
+    <section id="section-2" class="section-2">
+        <h2>Who I am</h2>
+        <p>Lorem ipsum dolor sit amet consectetur, adipisicing elit. Nulla, dignissimos voluptatibus, molestiae reiciendis esse a et excepturi exercitationem provident dolorem nam quidem delectus quibusdam assumenda ipsum? Temporibus perferendis veniam tempore.</p>
+    </section>
+
+    <section id="section-3" class="section-3">
+        <h2>Tech lead & Web development</h2>
+        <p>Lorem ipsum dolor sit amet consectetur, adipisicing elit. Nulla, dignissimos voluptatibus, molestiae reiciendis esse a et excepturi exercitationem provident dolorem nam quidem delectus quibusdam assumenda ipsum? Temporibus perferendis veniam tempore.</p>
+    </section>
+
+    <section id="section-4" class="section-4">
+        <div class="section-4__title mx-0">
+            <h2>Why me?</h2>
+        </div>
+        <div class="section-4__content">
+            <ul class="section-4__list">
+                <li>Passionate about software development and eager to learn and grow in the field.</li>
+                <li>Strong foundation in programming languages such as JavaScript, Python, and Java.</li>
+                <li>Experience with web development frameworks like Angular and React.</li>
+                <li>Excellent problem-solving skills and ability to work collaboratively in a team environment.</li>
+                <li>Committed to delivering high-quality code and continuously improving my skills.</li>
+                <li>Passionate about software development and eager to learn and grow in the field.</li>
+                <li>Strong foundation in programming languages such as JavaScript, Python, and Java.</li>
+                <li>Experience with web development frameworks like Angular and React.</li>
+                <li>Excellent problem-solving skills and ability to work collaboratively in a team environment.</li>
+                <li>Committed to delivering high-quality code and continuously improving my skills.</li>
+            </ul>
+        </div>
+    </section>
+
+    <section id="section-5" class="section-5">
+        <div class="section-5__header">
+            <h2>Skills</h2>
+        </div>
+        <div class="section-5__viewport">
+            <div class="section-5__track">
+                <article class="section-5__card"><span>01</span><h3>UI systems</h3><p>Design systems, motion, and polished interfaces.</p></article>
+                <article class="section-5__card"><span>02</span><h3>Angular apps</h3><p>Modern web experiences built with scale in mind.</p></article>
+                <article class="section-5__card"><span>03</span><h3>Interactive content</h3><p>Creative storytelling through immersive experiences.</p></article>
+                <article class="section-5__card"><span>04</span><h3>Performance</h3><p>Fast, lightweight, and responsive implementations.</p></article>
+                <article class="section-5__card"><span>05</span><h3>API integrations</h3><p>Robust connections between frontends and services.</p></article>
+                <article class="section-5__card"><span>06</span><h3>Visual polish</h3><p>Typography, layouts, and animations that feel refined.</p></article>
+                <article class="section-5__card"><span>07</span><h3>Product thinking</h3><p>Solving real problems with practical interfaces.</p></article>
+                <article class="section-5__card"><span>08</span><h3>Automation</h3><p>Workflows that simplify repetitive tasks and save time.</p></article>
+                <article class="section-5__card"><span>09</span><h3>Testing</h3><p>Reliable releases with thoughtful quality checks.</p></article>
+                <article class="section-5__card"><span>10</span><h3>Growth</h3><p>Continuous learning and iteration in every project.</p></article>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-5__spacer"></div>
+
+    <span class="arrow">↓</span>
+</div>
+
+<section id="section-project-stories" class="section-project-stories">
+    <app-project-showcase [projects]="showcaseProjects" />
+</section>
+
+<section id="section-6" class="section-6">
+    <div class="section-6__header">
+        <h2>Projects</h2>
+    </div>
+    <div class="section-6__viewport">
+        <div class="section-6__track">
+            @for (project of projects; track project.title) {
+                <button
+                    type="button"
+                    class="section-6__item"
+                    (click)="openProject(project)"
+                    [attr.aria-label]="'Ver detalle de ' + project.title"
+                >
+                    <img [src]="project.image" [alt]="project.title" loading="lazy" decoding="async" />
+                    <span class="section-6__caption">{{ project.title }}</span>
+                </button>
+            }
+        </div>
+    </div>
+</section>
+
+<section id="section-7" class="section-7">
+    <div class="section-7__inner">
+        <h2>Let's talk</h2>
+        <p class="section-7__lead">¿Tienes un proyecto en mente? Escríbeme o descarga mi CV.</p>
+
+        <div class="section-7__contact">
+            <a class="section-7__contact-link" href="mailto:hola@danielsoltero.dev">hola&#64;danielsoltero.dev</a>
+            <a class="section-7__contact-link" href="tel:+34600000000">+34 600 000 000</a>
+        </div>
+
+        <div class="section-7__actions">
+            <!-- Placeholder: sustituye estos SVGs y enlaces por los tuyos -->
+            <a class="section-7__social" href="https://github.com/" target="_blank" rel="noopener" aria-label="GitHub">
+                <img src="assets/img/icon-github.svg" alt="" />
+            </a>
+            <a class="section-7__social" href="https://www.linkedin.com/" target="_blank" rel="noopener" aria-label="LinkedIn">
+                <img src="assets/img/icon-linkedin.svg" alt="" />
+            </a>
+            <a class="section-7__social" href="https://x.com/" target="_blank" rel="noopener" aria-label="X (Twitter)">
+                <img src="assets/img/icon-x.svg" alt="" />
+            </a>
+
+            <a class="section-7__cv" href="assets/cv/daniel-soltero-cv.pdf" download>
+                Descargar CV
+                <span class="section-7__cv-icon" aria-hidden="true">↓</span>
+            </a>
+        </div>
+    </div>
+
+    <footer class="section-7__footer">
+        <p>&copy; {{ currentYear }} Daniel Soltero. Todos los derechos reservados.</p>
+    </footer>
+</section>
+
+<div #projectModal class="project-modal" role="dialog" aria-modal="true" aria-label="Detalle del proyecto">
+    <button type="button" class="project-modal__close" (click)="closeProject()" aria-label="Cerrar">✕</button>
+
+    @if (activeProject) {
+        <div class="project-modal__content">
+            <img class="project-modal__image" [src]="activeProject.image" [alt]="activeProject.title" decoding="async" />
+            <div class="project-modal__body">
+                <h3>{{ activeProject.title }}</h3>
+                <p>{{ activeProject.description }}</p>
+                <ul class="project-modal__specs">
+                    @for (spec of activeProject.specs; track spec) {
+                        <li>{{ spec }}</li>
+                    }
+                </ul>
+            </div>
+        </div>
+    }
+</div>
+
+<button
+    #avatarButton
+    type="button"
+    class="avatar-button"
+    (click)="openGallery()"
+    aria-label="Abrir galería de imágenes"
+>
+    <img src="assets/img/avatar.jpg" alt="Daniel Soltero" />
+</button>
+
+<div #galleryOverlay class="gallery-overlay" role="dialog" aria-modal="true" aria-label="Galería de imágenes">
+    <button type="button" class="gallery-overlay__close" (click)="closeGallery()" aria-label="Cerrar galería">✕</button>
+
+    <button type="button" class="gallery-overlay__nav gallery-overlay__nav--prev" (click)="prevGalleryImage()" aria-label="Imagen anterior">‹</button>
+
+    <div #galleryTrack class="gallery-overlay__track">
+        @for (image of galleryImages; track image) {
+            <div class="gallery-overlay__slide">
+                <img [src]="image" alt="" loading="lazy" decoding="async" />
+            </div>
+        }
+    </div>
+
+    <button type="button" class="gallery-overlay__nav gallery-overlay__nav--next" (click)="nextGalleryImage()" aria-label="Siguiente imagen">›</button>
+</div>
+
+<button
+    type="button"
+    class="menu-toggle"
+    [class.menu-toggle--open]="isMenuOpen"
+    (click)="toggleMenu()"
+    [attr.aria-expanded]="isMenuOpen"
+    aria-label="Abrir menú"
+>
+    <span class="menu-toggle__line"></span>
+    <span class="menu-toggle__line"></span>
+</button>
+
+<div class="menu-overlay" (click)="closeMenu()">
+    <nav class="menu-panel" role="dialog" aria-modal="true" aria-label="Menú de navegación" (click)="$event.stopPropagation()">
+        <button type="button" class="menu-panel__item" (click)="goToTop()">Inicio</button>
+        <button type="button" class="menu-panel__item" (click)="goToLabel('section2Start')">Who I am</button>
+        <button type="button" class="menu-panel__item" (click)="goToLabel('s4Settled')">Why me?</button>
+        <button type="button" class="menu-panel__item" (click)="goToLabel('s5Opaque')">Skills</button>
+        <button type="button" class="menu-panel__item" (click)="goToElement('section-6')">Projects</button>
+        <button type="button" class="menu-panel__item" (click)="goToElement('section-7')">Contact</button>
+    </nav>
+</div>
