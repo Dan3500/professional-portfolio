@@ -8,7 +8,6 @@
   background-color: $bg-color;
 }
 
-// Degradado animado del logo "VI", reutilizado en los enlaces de contacto.
 $logo-gradient: linear-gradient(135deg, $color-secondary 0%, $color-primary 25%, $color-secondary 50%, $color-primary 75%, $color-secondary 100%);
 
 #mask {
@@ -19,18 +18,20 @@ $logo-gradient: linear-gradient(135deg, $color-secondary 0%, $color-primary 25%,
   height: 100%;
   z-index: 1000;
   pointer-events: none; // el mask-image no debe bloquear los clics de las secciones de detrás
+  -webkit-mask-image: url(../../../../public/assets/img/logo-vi.svg);
   mask-image: url(../../../../public/assets/img/logo-vi.svg);
+  -webkit-mask-size: clamp(4500dvh, 1250%, 0vh);
   mask-size: clamp(4500dvh, 1250%, 0vh);
+  -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
+  -webkit-mask-position: center 5%;
   mask-position: center 5%;
   mask-mode: alpha;
   -webkit-mask-mode: alpha;
-  filter: drop-shadow(0 0 12px red);
   background: $logo-gradient;
   background-size: 400% 400%;
   animation: gradient-shift 10s ease-in-out infinite;
-  -webkit-animation: gradient-shift 10s ease-in-out infinite;
-  -webkit-filter: drop-shadow(0 0 12px red);
+  animation-play-state: paused;
   opacity: 0.90;
 }
 
@@ -186,9 +187,13 @@ $logo-gradient: linear-gradient(135deg, $color-secondary 0%, $color-primary 25%,
   --sec2-c2: #{$color-secondary};
   --sec2-c3: #{$color-tertiary};
 
+  -webkit-mask-image: radial-gradient(circle, black 30%, transparent 70%);
   mask-image: radial-gradient(circle, black 30%, transparent 70%);
+  -webkit-mask-size: 0vmax 0vmax;
   mask-size: 0vmax 0vmax;
+  -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
+  -webkit-mask-position: center;
   mask-position: center;
 
   background: radial-gradient(
@@ -229,9 +234,13 @@ $logo-gradient: linear-gradient(135deg, $color-secondary 0%, $color-primary 25%,
   --sec3-c2: #{$color-secondary};
   --sec3-c3: #{$color-tertiary};
 
+  -webkit-mask-image: radial-gradient(circle, black 30%, transparent 70%);
   mask-image: radial-gradient(circle, black 30%, transparent 70%);
+  -webkit-mask-size: 0vmax 0vmax;
   mask-size: 0vmax 0vmax;
+  -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
+  -webkit-mask-position: center;
   mask-position: center;
 
   background: radial-gradient(
@@ -284,6 +293,7 @@ $logo-gradient: linear-gradient(135deg, $color-secondary 0%, $color-primary 25%,
   display: flex;
   flex-direction: row;
   align-items: center;
+  justify-content: center;
   box-sizing: border-box;
   overflow: hidden;
   color: white;
@@ -294,8 +304,8 @@ $logo-gradient: linear-gradient(135deg, $color-secondary 0%, $color-primary 25%,
   &::after {
     content: '';
     position: absolute;
-    left: 25%;
-    width: 75%;
+    left: 0;
+    width: 100%;
     height: 120px;
     z-index: 2;
     pointer-events: none;
@@ -313,14 +323,12 @@ $logo-gradient: linear-gradient(135deg, $color-secondary 0%, $color-primary 25%,
   }
 
   .section-4__title {
-    width: 25%;
     height: 100%;
     display: flex;
     align-items: center;
-    justify-content: flex-start;
     flex-shrink: 0;
     box-sizing: border-box;
-    padding: 0 4rem;
+    padding: 0 0 0 4rem;
 
     h2 {
       font-size: clamp(2rem, 3.2vw, 3rem);
@@ -329,17 +337,20 @@ $logo-gradient: linear-gradient(135deg, $color-secondary 0%, $color-primary 25%,
   }
 
   .section-4__content {
-    width: 75%;
+    flex: 0 1 calc(900px + 5rem);
+    min-width: 0;
     height: 100%;
     padding: 0 2.5rem;
     box-sizing: border-box;
     display: flex;
     align-items: center;
+    justify-content: center;
     overflow: hidden;
   }
 
   .section-4__list {
     width: 100%;
+    max-width: 900px;
     list-style: none;
     padding: 0;
     margin: 0;
@@ -690,7 +701,6 @@ $logo-gradient: linear-gradient(135deg, $color-secondary 0%, $color-primary 25%,
   }
 
   &__contact-link {
-    // Mismo degradado animado que el logo, recortado a la forma del texto.
     color: transparent;
     background: $logo-gradient;
     background-size: 400% 400%;
@@ -705,7 +715,7 @@ $logo-gradient: linear-gradient(135deg, $color-secondary 0%, $color-primary 25%,
 
     &:hover,
     &:focus-visible {
-      border-color: $color-secondary; // currentColor ahora es transparente
+      border-color: $color-secondary;
     }
   }
 
@@ -808,6 +818,7 @@ $logo-gradient: linear-gradient(135deg, $color-secondary 0%, $color-primary 25%,
   padding: 2rem;
   box-sizing: border-box;
   background: rgba(0, 0, 0, 0.75);
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 
   &__close {
@@ -917,8 +928,6 @@ $logo-gradient: linear-gradient(135deg, $color-secondary 0%, $color-primary 25%,
   }
 }
 
-// Lightbox de la galería del showcase: la foto/vídeo a casi pantalla completa.
-// top/left/width/height los anima GSAP desde la captura pulsada (ver openMedia).
 .media-lightbox {
   position: fixed;
   display: none;
@@ -932,16 +941,28 @@ $logo-gradient: linear-gradient(135deg, $color-secondary 0%, $color-primary 25%,
   justify-content: center;
   padding: 4.5rem 2rem 2rem;
   box-sizing: border-box;
-  background: rgba(0, 0, 0, 0.85);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
   cursor: zoom-out;
+
+  &__backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: rgba(0, 0, 0, 0.85);
+
+    &--blur {
+      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px);
+    }
+  }
 
   &__close {
     @extend .project-modal__close;
+    z-index: 2;
   }
 
   &__media {
+    position: relative;
+    z-index: 1;
     display: block;
     max-width: 100%;
     max-height: 100%;

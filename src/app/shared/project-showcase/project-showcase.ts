@@ -16,7 +16,6 @@ import { ScrubCanvas, VideoFrames } from './video-frames';
 
 gsap.registerPlugin(ScrollTrigger);
 
-// `origin` es la captura pulsada: el lightbox crece desde su posición.
 export interface MediaOpenEvent {
   media: ProjectMedia;
   origin: HTMLElement;
@@ -98,7 +97,6 @@ export class ProjectShowcase implements AfterViewInit, OnDestroy {
     ]);
   }
 
-  // Abre el lightbox de Index (ver openMedia).
   @Output() mediaOpen = new EventEmitter<MediaOpenEvent>();
 
   @ViewChild('root', { static: true }) rootRef!: ElementRef<HTMLElement>;
@@ -144,8 +142,6 @@ export class ProjectShowcase implements AfterViewInit, OnDestroy {
     this.players = [];
   }
 
-  // Los vídeos de la galería solo se descargan y reproducen cuando están
-  // cerca de la pantalla; fuera de ella se pausan para no gastar CPU.
   private observeShotVideos() {
     this.shotVideoObserver = new IntersectionObserver(
       (entries) => {

@@ -95,7 +95,6 @@ export class Index implements AfterViewInit, OnDestroy {
   private projectModalTween: gsap.core.Timeline | gsap.core.Tween | null = null;
   private projectModalKeydownHandler: ((event: KeyboardEvent) => void) | null = null;
 
-  // Lightbox de las fotos/vídeos de la galería del showcase
   activeMedia: ProjectMedia | null = null;
   private mediaOrigin: HTMLElement | null = null;
   private mediaLightboxTween: gsap.core.Timeline | gsap.core.Tween | null = null;
@@ -181,8 +180,6 @@ export class Index implements AfterViewInit, OnDestroy {
 
     const colors = ['#3ec6ff', '#1D4E89', '#0077B6', '#0369a1'];
     const symbols = ['<', '>', '{', '}', '/', '\\', ';', ':', '=', '+', '*', '$', '#', '@', '%', '&', '!', '?', '^', '~'];
-    // Tamaños enteros y ordenados por fuente: así draw() solo cambia ctx.font
-    // unas pocas veces por fotograma en vez de una por partícula.
     const particles = Array.from({ length: 120 }, () => {
       const size = Math.round(12 + Math.random() * 8);
       return {
@@ -240,6 +237,10 @@ export class Index implements AfterViewInit, OnDestroy {
       cancelAnimationFrame(this.particlesRafId);
       this.particlesRafId = null;
     }
+  }
+
+  private setLogoGradientPaused(paused: boolean) {
+    document.getElementById('mask')?.style.setProperty('animation-play-state', paused ? 'paused' : 'running');
   }
 
   private startParticles() {
@@ -432,39 +433,42 @@ export class Index implements AfterViewInit, OnDestroy {
     }
   }
 
-  // Igual que la galería del avatar: el panel crece desde la captura pulsada
-  // hasta pantalla completa, y al cerrar vuelve a ella.
   openMedia({ media, origin }: MediaOpenEvent) {
+    this.mediaLightboxTween?.kill();
+    if (this.mediaOrigin) this.mediaOrigin.style.visibility = '';
+
     this.activeMedia = media;
     this.mediaOrigin = origin;
     this.cdr.detectChanges();
 
     const lightbox = this.mediaLightboxRef.nativeElement;
-    const rect = origin.getBoundingClientRect();
-    this.mediaLightboxTween?.kill();
-
-    // El padding final sale del CSS (cambia en móvil); arranca en 0 para que
-    // la foto llene la captura al empezar.
-    gsap.set(lightbox, { display: 'flex', clearProps: 'padding' });
-    const { paddingTop, paddingRight, paddingBottom, paddingLeft } = getComputedStyle(lightbox);
-    gsap.set(lightbox, { top: rect.top, left: rect.left, width: rect.width, height: rect.height, padding: 0, opacity: 1 });
+    const mediaEl = lightbox.querySelector<HTMLElement>('.media-lightbox__media');
+    gsap.set(lightbox, { display: 'flex', opacity: 1 });
+    gsap.set('.media-lightbox__backdrop', { opacity: 0 });
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (this.activeMedia === media) lightbox.querySelector('.media-lightbox__backdrop')?.classList.add('media-lightbox__backdrop--blur');
+    }));
     gsap.set('.media-lightbox__close', { opacity: 0 });
 
-    this.mediaLightboxTween = gsap.timeline()
-      .to(lightbox, {
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        paddingTop,
-        paddingRight,
-        paddingBottom,
-        paddingLeft,
-        duration: 0.6,
-        ease: 'power3.inOut',
-        onComplete: () => { gsap.set(lightbox, { clearProps: 'padding' }); },
-      })
-      .to('.media-lightbox__close', { opacity: 1, duration: 0.2, ease: 'power1.out' });
+    const tl = gsap.timeline();
+    tl.to('.media-lightbox__backdrop', { opacity: 1, duration: 0.45, ease: 'power1.out' }, 0);
+
+    if (mediaEl) {
+      this.sizeLightboxMedia(mediaEl, origin);
+      origin.style.visibility = 'hidden';
+      tl.fromTo(mediaEl, this.mediaFlipFrom(mediaEl, origin), {
+        x: 0,
+        y: 0,
+        scale: 1,
+        clipPath: 'inset(0px 0px 0px 0px)',
+        duration: 0.75,
+        ease: 'expo.out',
+        onComplete: () => { gsap.set(mediaEl, { clearProps: 'clipPath' }); },
+      }, 0);
+    }
+
+    tl.to('.media-lightbox__close', { opacity: 1, duration: 0.25, ease: 'power1.out' }, 0.4);
+    this.mediaLightboxTween = tl;
 
     document.body.style.overflow = 'hidden';
     this.lenis?.stop();
@@ -479,30 +483,32 @@ export class Index implements AfterViewInit, OnDestroy {
     if (!this.activeMedia) return;
 
     const lightbox = this.mediaLightboxRef.nativeElement;
-    const onComplete = () => {
-      gsap.set(lightbox, { display: 'none' });
-      this.activeMedia = null;
-      this.mediaOrigin = null;
-      this.cdr.detectChanges(); // desmonta el <video> para que deje de reproducirse
-    };
+    const mediaEl = lightbox.querySelector<HTMLElement>('.media-lightbox__media');
+    const origin = this.mediaOrigin;
 
     this.mediaLightboxTween?.kill();
-    gsap.set('.media-lightbox__close', { opacity: 0 });
+    const tl = gsap.timeline({
+      onComplete: () => {
+        if (origin) origin.style.visibility = '';
+        gsap.set(lightbox, { display: 'none' });
+        lightbox.querySelector('.media-lightbox__backdrop')?.classList.remove('media-lightbox__backdrop--blur');
+        this.activeMedia = null;
+        this.mediaOrigin = null;
+        this.cdr.detectChanges();
+      },
+    });
 
-    // Con el scroll bloqueado la captura sigue donde estaba al abrir.
-    const rect = this.mediaOrigin?.isConnected ? this.mediaOrigin.getBoundingClientRect() : null;
-    this.mediaLightboxTween = rect
-      ? gsap.to(lightbox, {
-          top: rect.top,
-          left: rect.left,
-          width: rect.width,
-          height: rect.height,
-          padding: 0,
-          duration: 0.5,
-          ease: 'power3.inOut',
-          onComplete,
-        })
-      : gsap.to(lightbox, { opacity: 0, duration: 0.25, ease: 'power1.in', onComplete });
+    tl.to('.media-lightbox__close', { opacity: 0, duration: 0.15, ease: 'power1.in' }, 0);
+
+    if (mediaEl && origin?.isConnected) {
+      gsap.set(mediaEl, { clipPath: 'inset(0px 0px 0px 0px)' });
+      tl.to(mediaEl, { ...this.mediaFlipFrom(mediaEl, origin), duration: 0.55, ease: 'power3.inOut' }, 0);
+      tl.to('.media-lightbox__backdrop', { opacity: 0, duration: 0.45, ease: 'power1.in' }, 0.1);
+    } else {
+      tl.to(lightbox, { opacity: 0, duration: 0.25, ease: 'power1.in' }, 0);
+    }
+
+    this.mediaLightboxTween = tl;
 
     document.body.style.overflow = '';
     this.lenis?.start();
@@ -511,6 +517,44 @@ export class Index implements AfterViewInit, OnDestroy {
       window.removeEventListener('keydown', this.mediaLightboxKeydownHandler);
       this.mediaLightboxKeydownHandler = null;
     }
+  }
+
+  private sizeLightboxMedia(mediaEl: HTMLElement, origin: HTMLElement) {
+    const source = origin.querySelector('.shot__media');
+    const naturalWidth = source instanceof HTMLVideoElement ? source.videoWidth : source instanceof HTMLImageElement ? source.naturalWidth : 0;
+    const naturalHeight = source instanceof HTMLVideoElement ? source.videoHeight : source instanceof HTMLImageElement ? source.naturalHeight : 0;
+    const originRect = origin.getBoundingClientRect();
+    const ratio = naturalWidth && naturalHeight ? naturalWidth / naturalHeight : originRect.width / originRect.height;
+
+    const lightbox = this.mediaLightboxRef.nativeElement;
+    const style = getComputedStyle(lightbox);
+    const availableWidth = lightbox.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+    const availableHeight = lightbox.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+
+    const width = Math.min(availableWidth, availableHeight * ratio, naturalWidth || Infinity);
+    gsap.set(mediaEl, { width, height: width / ratio });
+  }
+
+  private mediaFlipFrom(mediaEl: HTMLElement, origin: HTMLElement): gsap.TweenVars {
+    const o = origin.getBoundingClientRect();
+    const final = { left: mediaEl.offsetLeft, top: mediaEl.offsetTop, width: mediaEl.offsetWidth, height: mediaEl.offsetHeight };
+
+    const originRatio = o.width / o.height;
+    let cropWidth = final.width;
+    let cropHeight = final.height;
+    if (final.width / final.height > originRatio) cropWidth = final.height * originRatio;
+    else cropHeight = final.width / originRatio;
+    const cropX = (final.width - cropWidth) / 2;
+    const cropY = (final.height - cropHeight) / 2;
+    const scale = o.width / cropWidth;
+
+    return {
+      transformOrigin: '0 0',
+      x: o.left - final.left - scale * cropX,
+      y: o.top - final.top - scale * cropY,
+      scale,
+      clipPath: `inset(${cropY}px ${cropX}px ${cropY}px ${cropX}px)`,
+    };
   }
 
   toggleMenu() {
@@ -647,6 +691,7 @@ export class Index implements AfterViewInit, OnDestroy {
         opacity: 0,
         ease: 'power2.out',
         duration: 2.2,
+        onStart: () => this.setLogoGradientPaused(false),
         onComplete: () => {
           this.introVisible = false;
           this.stopParticles();
@@ -654,6 +699,7 @@ export class Index implements AfterViewInit, OnDestroy {
         onReverseComplete: () => {
           this.introVisible = true;
           this.startParticles();
+          this.setLogoGradientPaused(true);
         },
       }, '<0.6')
 

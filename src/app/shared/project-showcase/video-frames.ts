@@ -129,10 +129,26 @@ export class VideoFrames {
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
+      const encoder = FrameEncoder.get();
       const encodes: Promise<void>[] = [];
+      const pending = new Set<number>();
       const capture = (time: number) => {
         const slot = Math.min(total - 1, Math.floor((time / video.duration) * total));
-        if (this.disposed || this.frames[slot]) return;
+        if (this.disposed || this.frames[slot] || pending.has(slot)) return;
+        pending.add(slot);
+
+        if (encoder) {
+          encodes.push(
+            createImageBitmap(video, { resizeWidth: canvas.width, resizeHeight: canvas.height, resizeQuality: 'low' })
+              .then((bitmap) => encoder.encode(bitmap, JPEG_QUALITY))
+              .then((blob) => {
+                if (blob && !this.disposed) this.frames[slot] = blob;
+              })
+              .catch(() => {}),
+          );
+          return;
+        }
+
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         // toBlob copia el bitmap en el momento de la llamada, así que se
         // puede reutilizar el mismo canvas para el siguiente fotograma.
@@ -293,6 +309,40 @@ export class ScrubCanvas {
     const x = Math.floor((cw - bitmap.width * scale) / 2);
     const y = Math.floor((ch - bitmap.height * scale) / 2);
     this.ctx!.drawImage(bitmap, x, y, cw - 2 * x, ch - 2 * y);
+  }
+}
+
+class FrameEncoder {
+  private static instance: FrameEncoder | null | undefined;
+  private nextId = 0;
+  private pending = new Map<number, (blob: Blob | null) => void>();
+
+  private constructor(private readonly worker: Worker) {
+    worker.onmessage = ({ data }: MessageEvent<{ id: number; blob: Blob | null }>) => {
+      this.pending.get(data.id)?.(data.blob);
+      this.pending.delete(data.id);
+    };
+  }
+
+  static get(): FrameEncoder | null {
+    if (FrameEncoder.instance === undefined) {
+      try {
+        FrameEncoder.instance = typeof Worker !== 'undefined' && typeof OffscreenCanvas !== 'undefined'
+          ? new FrameEncoder(new Worker(new URL('./frame-encoder.worker', import.meta.url), { type: 'module' }))
+          : null;
+      } catch {
+        FrameEncoder.instance = null;
+      }
+    }
+    return FrameEncoder.instance;
+  }
+
+  encode(bitmap: ImageBitmap, quality: number): Promise<Blob | null> {
+    const id = this.nextId++;
+    return new Promise((resolve) => {
+      this.pending.set(id, resolve);
+      this.worker.postMessage({ id, bitmap, quality }, [bitmap]);
+    });
   }
 }
 

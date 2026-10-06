@@ -131,6 +131,7 @@
 </div>
 
 <div #mediaLightbox class="media-lightbox" role="dialog" aria-modal="true" aria-label="Imagen ampliada" (click)="closeMedia()">
+    <div class="media-lightbox__backdrop"></div>
     <button type="button" class="media-lightbox__close" (click)="closeMedia()" aria-label="Cerrar">✕</button>
 
     @if (activeMedia) {
