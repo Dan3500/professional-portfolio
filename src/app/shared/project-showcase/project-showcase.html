@@ -1,46 +1,69 @@
-<section #root class="project-showcase">
-  @for (project of projects; track project.titulo; let i = $index) {
-    <ng-container>
-      <div class="project-showcase__hero">
-        @if (project.videoPortada.type === 'video') {
-          <video class="project-showcase__media" [src]="project.videoPortada.src" autoplay muted loop playsinline preload="auto"></video>
+<div #root class="project-showcase">
+  @for (chapter of chapters; track $index) {
+    <section class="chapter" [attr.data-align]="chapter.align" [attr.data-variant]="chapter.variant">
+      <div class="chapter__stage">
+        @if (chapter.media.type === 'video') {
+          <canvas class="chapter__media" [attr.data-src]="chapter.media.src"></canvas>
         } @else {
-          <img class="project-showcase__media" [src]="project.videoPortada.src" [alt]="project.titulo" loading="eager" decoding="async" />
+          <img class="chapter__media" [src]="chapter.media.src" alt="" decoding="async" />
         }
+        <div class="chapter__vignette"></div>
+        <div class="chapter__dim chapter__dim--enter"></div>
+        <div class="chapter__dim chapter__dim--leave"></div>
       </div>
 
-      <div class="project-showcase__text" [class.project-showcase__text--mirror]="i % 2 === 1">
-        <h2 class="project-showcase__title">{{ project.titulo }}</h2>
-        <p class="project-showcase__subtitle">{{ project.subtitulo }}</p>
-        <p class="project-showcase__description">{{ project.descripcion }}</p>
-      </div>
+      <div class="chapter__content">
+        <div class="chapter__spacer"></div>
 
-      <div
-        class="project-showcase__card project-showcase__card--primary"
-        [class.project-showcase__card--mirror]="i % 2 === 1"
-      >
-        @if (project.mediaSecundaria1.type === 'video') {
-          <video class="project-showcase__media" [src]="project.mediaSecundaria1.src" autoplay muted loop playsinline preload="metadata"></video>
+        @if (chapter.variant === 'name') {
+          <h2 class="chapter__title">{{ chapter.heading }}</h2>
         } @else {
-          <img class="project-showcase__media" [src]="project.mediaSecundaria1.src" [alt]="project.titulo" loading="lazy" decoding="async" />
+          <div class="chapter__quote-hold">
+            <blockquote class="chapter__quote">«{{ chapter.heading }}»</blockquote>
+          </div>
         }
-        <span class="project-showcase__expand-icon" aria-hidden="true">⤢</span>
-      </div>
 
-      <div
-        class="project-showcase__card project-showcase__card--secondary"
-        [class.project-showcase__card--mirror]="i % 2 === 1"
-      >
-        @if (project.mediaSecundaria2.type === 'video') {
-          <video class="project-showcase__media" [src]="project.mediaSecundaria2.src" autoplay muted loop playsinline preload="metadata"></video>
-        } @else {
-          <img class="project-showcase__media" [src]="project.mediaSecundaria2.src" [alt]="project.titulo" loading="lazy" decoding="async" />
+        @if (chapter.subtitle || chapter.body) {
+          <div class="copy" [class.copy--split]="chapter.variant === 'quote'">
+            @if (chapter.subtitle) {
+              <p class="copy__subtitle">{{ chapter.subtitle }}</p>
+            }
+            @if (chapter.body) {
+              <p class="copy__body">{{ chapter.body }}</p>
+            }
+          </div>
         }
-      </div>
 
-      <div class="project-showcase__quote">
-        <p>«{{ project.quote }}»</p>
+        <div class="gallery">
+          @for (column of chapter.columns; track $index; let c = $index) {
+            <div class="gallery__col" [class.gallery__col--a]="c === 0" [class.gallery__col--b]="c === 1">
+              @for (shot of column; track $index) {
+                <button
+                  type="button"
+                  class="shot"
+                  [style.--w]="shot.width"
+                  [style.aspect-ratio]="shot.ratio"
+                  (click)="mediaOpen.emit(shot)"
+                  aria-label="Ampliar"
+                >
+                  @if (shot.type === 'video') {
+                    <video class="shot__media" [src]="shot.src" autoplay muted [muted]="true" [volume]="0" loop playsinline preload="metadata"></video>
+                  } @else {
+                    <img class="shot__media" [src]="shot.src" alt="" loading="lazy" decoding="async" />
+                  }
+                  <span class="shot__icon" aria-hidden="true">
+                    <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8">
+                      <path d="M9.5 2.5h4v4M6.5 13.5h-4v-4M13.5 2.5 9 7M2.5 13.5 7 9" />
+                    </svg>
+                  </span>
+                </button>
+              }
+            </div>
+          }
+        </div>
       </div>
-    </ng-container>
+    </section>
   }
-</section>
+
+  <div class="project-showcase__end-line" aria-hidden="true"></div>
+</div>
