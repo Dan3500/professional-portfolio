@@ -8,6 +8,9 @@
   background-color: $bg-color;
 }
 
+// Degradado animado del logo "VI", reutilizado en los enlaces de contacto.
+$logo-gradient: linear-gradient(135deg, $color-secondary 0%, $color-primary 25%, $color-secondary 50%, $color-primary 75%, $color-secondary 100%);
+
 #mask {
   position: fixed;
   top: 0;
@@ -17,17 +20,18 @@
   z-index: 1000;
   pointer-events: none; // el mask-image no debe bloquear los clics de las secciones de detrás
   mask-image: url(../../../../public/assets/img/logo-vi.svg);
-  mask-size: clamp(4000dvh, 1250%, 0vh);
+  mask-size: clamp(4500dvh, 1250%, 0vh);
   mask-repeat: no-repeat;
   mask-position: center 5%;
   mask-mode: alpha;
   -webkit-mask-mode: alpha;
   filter: drop-shadow(0 0 12px red);
-  background: linear-gradient(    135deg,    $color-secondary 0%,    $color-primary 25%,    $color-secondary 50%,    $color-primary 75%,    $color-secondary 100%,  );
+  background: $logo-gradient;
   background-size: 400% 400%;
   animation: gradient-shift 10s ease-in-out infinite;
   -webkit-animation: gradient-shift 10s ease-in-out infinite;
   -webkit-filter: drop-shadow(0 0 12px red);
+  opacity: 0.90;
 }
 
 @keyframes gradient-shift {
@@ -644,133 +648,13 @@
   }
 }
 
-// Igual que section-6: flujo normal (scroll nativo). <app-project-showcase>
+// A diferencia de las secciones 2-5, va en flujo normal (scroll nativo). <app-project-showcase>
 // pinea su propio ScrollTrigger (un único pin para todos los proyectos, ver
 // project-showcase.ts), independiente del timeline maestro de arriba.
 .section-project-stories {
   position: relative;
   width: 100%;
   background-color: $bg-color;
-}
-
-// A diferencia de las secciones 2-5, va en flujo normal (scroll nativo), no dentro del pin de GSAP.
-.section-6 {
-  position: relative;
-  width: 100%;
-  padding: 3.5rem 0;
-  background-color: $bg-color;
-  color: white;
-  font-family: $font-montserrat;
-  box-sizing: border-box;
-
-  &__header {
-    padding: 0 4rem;
-    margin: 0 0 2rem;
-
-    h2 {
-      font-size: clamp(2rem, 4vw, 3rem);
-      margin: 0 0 0.4rem;
-    }
-
-    p {
-      margin: 0;
-      color: rgba(255, 255, 255, 0.75);
-      font-size: 1rem;
-    }
-  }
-
-  // El padding lateral va en __track: con overflow-x, el navegador ignora
-  // el padding del contenedor cuando el hijo (width:max-content) es más ancho.
-  &__viewport {
-    width: 100%;
-    overflow-x: auto;
-    scroll-snap-type: x proximity; // "mandatory" forzaba un scroll inicial que cancelaba el padding
-    scroll-padding-left: 4rem; // cuenta el padding como margen de encaje, si no el snap lo compensa solo
-    scrollbar-width: none;
-    box-sizing: border-box;
-
-    &::-webkit-scrollbar {
-      display: none;
-    }
-  }
-
-  &__track {
-    display: flex;
-    gap: 1.5rem;
-    width: max-content;
-    padding: 0 4rem;
-    box-sizing: border-box;
-  }
-
-  &__item {
-    position: relative;
-    width: min(32vw, 340px);
-    aspect-ratio: 4 / 3;
-    flex-shrink: 0;
-    scroll-snap-align: start;
-    overflow: hidden;
-    border-radius: 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    padding: 0;
-    cursor: pointer;
-    background: rgba(255, 255, 255, 0.05);
-
-    img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-      transition: transform 0.4s ease;
-    }
-
-    &:hover img,
-    &:focus-visible img {
-      transform: scale(1.06);
-    }
-  }
-
-  &__caption {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    padding: 1.5rem 1.25rem 1rem;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, transparent 100%);
-    color: white;
-    font-weight: 700;
-    font-size: 1.05rem;
-    text-align: left;
-    opacity: 0;
-    transform: translateY(6px);
-    transition: opacity 0.25s ease, transform 0.25s ease;
-    pointer-events: none;
-  }
-
-  &__item:hover &__caption,
-  &__item:focus-visible &__caption {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  @media (max-width: 900px) {
-    padding-top: 6rem; // deja hueco bajo el logo/avatar fijos
-
-    &__header {
-      padding: 0 2rem;
-    }
-
-    &__viewport {
-      scroll-padding-left: 2rem;
-    }
-
-    &__track {
-      padding: 0 2rem;
-    }
-
-    &__item {
-      width: min(70vw, 320px);
-    }
-  }
 }
 
 .section-7 {
@@ -806,7 +690,13 @@
   }
 
   &__contact-link {
-    color: $color-primary;
+    // Mismo degradado animado que el logo, recortado a la forma del texto.
+    color: transparent;
+    background: $logo-gradient;
+    background-size: 400% 400%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: gradient-shift 10s ease-in-out infinite;
     font-size: clamp(1.3rem, 2.6vw, 1.9rem);
     font-weight: 700;
     text-decoration: none;
@@ -815,7 +705,7 @@
 
     &:hover,
     &:focus-visible {
-      border-color: currentColor;
+      border-color: $color-secondary; // currentColor ahora es transparente
     }
   }
 
@@ -1024,6 +914,45 @@
     &__body {
       padding: 1.5rem;
     }
+  }
+}
+
+// Lightbox de la galería del showcase: la foto/vídeo a casi pantalla completa.
+// top/left/width/height los anima GSAP desde la captura pulsada (ver openMedia).
+.media-lightbox {
+  position: fixed;
+  display: none;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 3000;
+  overflow: hidden;
+  align-items: center;
+  justify-content: center;
+  padding: 4.5rem 2rem 2rem;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.85);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  cursor: zoom-out;
+
+  &__close {
+    @extend .project-modal__close;
+  }
+
+  &__media {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 0.5rem;
+    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5);
+    cursor: default;
+  }
+
+  @media (max-width: 768px) {
+    padding: 4rem 0.75rem 1rem;
   }
 }
 

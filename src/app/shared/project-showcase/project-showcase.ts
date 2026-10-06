@@ -16,6 +16,12 @@ import { ScrubCanvas, VideoFrames } from './video-frames';
 
 gsap.registerPlugin(ScrollTrigger);
 
+// `origin` es la captura pulsada: el lightbox crece desde su posición.
+export interface MediaOpenEvent {
+  media: ProjectMedia;
+  origin: HTMLElement;
+}
+
 interface Shot extends ProjectMedia {
   width: string;
   ratio: string;
@@ -35,13 +41,13 @@ interface Chapter {
 // arranca más abajo; la B, las pequeñas. Se reparten las fotos alternando
 // columna y ciclando estos formatos.
 const COLUMN_A_SHAPES = [
-  { width: '27vw', ratio: '4 / 3' },
-  { width: '21vw', ratio: '1 / 1' },
+  { width: '40vw', ratio: '4 / 3' },
+  { width: '32vw', ratio: '1 / 1' },
 ];
 const COLUMN_B_SHAPES = [
-  { width: '13vw', ratio: '3 / 4' },
-  { width: '13vw', ratio: '4 / 3' },
-  { width: '11vw', ratio: '2 / 3' },
+  { width: '22vw', ratio: '3 / 4' },
+  { width: '22vw', ratio: '4 / 3' },
+  { width: '18vw', ratio: '2 / 3' },
 ];
 
 // Puntos de scroll de cada fase (formato ScrollTrigger "<elemento> <viewport>").
@@ -92,8 +98,8 @@ export class ProjectShowcase implements AfterViewInit, OnDestroy {
     ]);
   }
 
-  // Hook para abrir un lightbox; de momento nadie lo escucha.
-  @Output() mediaOpen = new EventEmitter<ProjectMedia>();
+  // Abre el lightbox de Index (ver openMedia).
+  @Output() mediaOpen = new EventEmitter<MediaOpenEvent>();
 
   @ViewChild('root', { static: true }) rootRef!: ElementRef<HTMLElement>;
 
@@ -104,6 +110,7 @@ export class ProjectShowcase implements AfterViewInit, OnDestroy {
   private frames = new Map<string, VideoFrames>();
   private players: { player: ScrubCanvas; active: boolean }[] = [];
   private extractionTimeout: ReturnType<typeof setTimeout> | null = null;
+  private shotVideoObserver: IntersectionObserver | null = null;
   private resizeHandler = () => this.players.forEach(({ player }) => player.resize());
   private tick = () => this.players.forEach(({ player, active }) => active && player.tick());
 
@@ -113,6 +120,7 @@ export class ProjectShowcase implements AfterViewInit, OnDestroy {
 
     gsap.ticker.add(this.tick);
     window.addEventListener('resize', this.resizeHandler);
+    this.observeShotVideos();
     document.fonts?.ready.then(() => ScrollTrigger.refresh());
 
     // Extrae los vídeos en orden de aparición mientras el usuario está en la
@@ -126,6 +134,7 @@ export class ProjectShowcase implements AfterViewInit, OnDestroy {
 
   ngOnDestroy() {
     if (this.extractionTimeout) clearTimeout(this.extractionTimeout);
+    this.shotVideoObserver?.disconnect();
     gsap.ticker.remove(this.tick);
     window.removeEventListener('resize', this.resizeHandler);
     this.ctx?.revert();
@@ -133,6 +142,24 @@ export class ProjectShowcase implements AfterViewInit, OnDestroy {
     this.frames.forEach((frames) => frames.dispose());
     this.frames.clear();
     this.players = [];
+  }
+
+  // Los vídeos de la galería solo se descargan y reproducen cuando están
+  // cerca de la pantalla; fuera de ella se pausan para no gastar CPU.
+  private observeShotVideos() {
+    this.shotVideoObserver = new IntersectionObserver(
+      (entries) => {
+        for (const { target, isIntersecting } of entries) {
+          const video = target as HTMLVideoElement;
+          if (isIntersecting) video.play().catch(() => {});
+          else video.pause();
+        }
+      },
+      { rootMargin: '200px 0px' },
+    );
+    this.rootRef.nativeElement
+      .querySelectorAll<HTMLVideoElement>('video.shot__media')
+      .forEach((video) => this.shotVideoObserver!.observe(video));
   }
 
   private toColumns(media: ProjectMedia[]): [Shot[], Shot[]] {

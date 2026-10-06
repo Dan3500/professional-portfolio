@@ -74,28 +74,7 @@
 </div>
 
 <section id="section-project-stories" class="section-project-stories">
-    <app-project-showcase [projects]="showcaseProjects" />
-</section>
-
-<section id="section-6" class="section-6">
-    <div class="section-6__header">
-        <h2>Projects</h2>
-    </div>
-    <div class="section-6__viewport">
-        <div class="section-6__track">
-            @for (project of projects; track project.title) {
-                <button
-                    type="button"
-                    class="section-6__item"
-                    (click)="openProject(project)"
-                    [attr.aria-label]="'Ver detalle de ' + project.title"
-                >
-                    <img [src]="project.image" [alt]="project.title" loading="lazy" decoding="async" />
-                    <span class="section-6__caption">{{ project.title }}</span>
-                </button>
-            }
-        </div>
-    </div>
+    <app-project-showcase [projects]="showcaseProjects" (mediaOpen)="openMedia($event)" />
 </section>
 
 <section id="section-7" class="section-7">
@@ -151,6 +130,18 @@
     }
 </div>
 
+<div #mediaLightbox class="media-lightbox" role="dialog" aria-modal="true" aria-label="Imagen ampliada" (click)="closeMedia()">
+    <button type="button" class="media-lightbox__close" (click)="closeMedia()" aria-label="Cerrar">✕</button>
+
+    @if (activeMedia) {
+        @if (activeMedia.type === 'video') {
+            <video class="media-lightbox__media" [src]="activeMedia.src" autoplay muted [muted]="true" loop playsinline controls (click)="$event.stopPropagation()"></video>
+        } @else {
+            <img class="media-lightbox__media" [src]="activeMedia.src" alt="" decoding="async" (click)="$event.stopPropagation()" />
+        }
+    }
+</div>
+
 <button
     #avatarButton
     type="button"
@@ -195,7 +186,7 @@
         <button type="button" class="menu-panel__item" (click)="goToLabel('section2Start')">Who I am</button>
         <button type="button" class="menu-panel__item" (click)="goToLabel('s4Settled')">Why me?</button>
         <button type="button" class="menu-panel__item" (click)="goToLabel('s5Opaque')">Skills</button>
-        <button type="button" class="menu-panel__item" (click)="goToElement('section-6')">Projects</button>
+        <button type="button" class="menu-panel__item" (click)="goToElement('section-project-stories')">Projects</button>
         <button type="button" class="menu-panel__item" (click)="goToElement('section-7')">Contact</button>
     </nav>
 </div>

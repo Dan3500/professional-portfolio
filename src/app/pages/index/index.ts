@@ -2,8 +2,8 @@ import { Component, ElementRef, ViewChild, AfterViewInit, OnDestroy, ChangeDetec
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
-import { ProjectShowcase } from '../../shared/project-showcase/project-showcase';
-import { PROJECTS } from './project-stories.data';
+import { MediaOpenEvent, ProjectShowcase } from '../../shared/project-showcase/project-showcase';
+import { PROJECTS, ProjectMedia } from './project-stories.data';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -34,6 +34,7 @@ export class Index implements AfterViewInit, OnDestroy {
   @ViewChild('galleryOverlay', { static: true }) galleryOverlayRef!: ElementRef<HTMLDivElement>;
   @ViewChild('galleryTrack', { static: true }) galleryTrackRef!: ElementRef<HTMLDivElement>;
   @ViewChild('projectModal', { static: true }) projectModalRef!: ElementRef<HTMLDivElement>;
+  @ViewChild('mediaLightbox', { static: true }) mediaLightboxRef!: ElementRef<HTMLDivElement>;
 
   currentYear = new Date().getFullYear();
 
@@ -94,6 +95,12 @@ export class Index implements AfterViewInit, OnDestroy {
   private projectModalTween: gsap.core.Timeline | gsap.core.Tween | null = null;
   private projectModalKeydownHandler: ((event: KeyboardEvent) => void) | null = null;
 
+  // Lightbox de las fotos/vídeos de la galería del showcase
+  activeMedia: ProjectMedia | null = null;
+  private mediaOrigin: HTMLElement | null = null;
+  private mediaLightboxTween: gsap.core.Timeline | gsap.core.Tween | null = null;
+  private mediaLightboxKeydownHandler: ((event: KeyboardEvent) => void) | null = null;
+
   // Menu
   isMenuOpen = false;
   private menuTween: gsap.core.Timeline | gsap.core.Tween | null = null;
@@ -141,6 +148,9 @@ export class Index implements AfterViewInit, OnDestroy {
     this.projectModalTween?.kill();
     if (this.projectModalKeydownHandler) window.removeEventListener('keydown', this.projectModalKeydownHandler);
 
+    this.mediaLightboxTween?.kill();
+    if (this.mediaLightboxKeydownHandler) window.removeEventListener('keydown', this.mediaLightboxKeydownHandler);
+
     this.menuTween?.kill();
     if (this.menuKeydownHandler) window.removeEventListener('keydown', this.menuKeydownHandler);
   }
@@ -171,8 +181,10 @@ export class Index implements AfterViewInit, OnDestroy {
 
     const colors = ['#3ec6ff', '#1D4E89', '#0077B6', '#0369a1'];
     const symbols = ['<', '>', '{', '}', '/', '\\', ';', ':', '=', '+', '*', '$', '#', '@', '%', '&', '!', '?', '^', '~'];
+    // Tamaños enteros y ordenados por fuente: así draw() solo cambia ctx.font
+    // unas pocas veces por fotograma en vez de una por partícula.
     const particles = Array.from({ length: 120 }, () => {
-      const size = 12 + Math.random() * 8;
+      const size = Math.round(12 + Math.random() * 8);
       return {
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
@@ -184,25 +196,29 @@ export class Index implements AfterViewInit, OnDestroy {
         font: `${size}px 'Montserrat', monospace`,
         opacity: 0.55 + Math.random() * 0.35,
       };
-    });
+    }).sort((a, b) => a.size - b.size);
 
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
+      let currentFont = '';
       for (const p of particles) {
-        ctx.font = p.font;
+        if (p.font !== currentFont) {
+          ctx.font = p.font;
+          currentFont = p.font;
+        }
         ctx.fillStyle = p.color;
         ctx.globalAlpha = p.opacity;
         ctx.fillText(p.symbol, p.x, p.y);
-        ctx.globalAlpha = 1;
 
         p.x += p.vx;
         p.y += p.vy;
         if (p.x < -20 || p.x > canvas.width + 20) p.vx *= -1;
         if (p.y < -20 || p.y > canvas.height + 20) p.vy *= -1;
       }
+      ctx.globalAlpha = 1;
       this.particlesRafId = requestAnimationFrame(draw);
     };
 
@@ -413,6 +429,87 @@ export class Index implements AfterViewInit, OnDestroy {
     if (this.projectModalKeydownHandler) {
       window.removeEventListener('keydown', this.projectModalKeydownHandler);
       this.projectModalKeydownHandler = null;
+    }
+  }
+
+  // Igual que la galería del avatar: el panel crece desde la captura pulsada
+  // hasta pantalla completa, y al cerrar vuelve a ella.
+  openMedia({ media, origin }: MediaOpenEvent) {
+    this.activeMedia = media;
+    this.mediaOrigin = origin;
+    this.cdr.detectChanges();
+
+    const lightbox = this.mediaLightboxRef.nativeElement;
+    const rect = origin.getBoundingClientRect();
+    this.mediaLightboxTween?.kill();
+
+    // El padding final sale del CSS (cambia en móvil); arranca en 0 para que
+    // la foto llene la captura al empezar.
+    gsap.set(lightbox, { display: 'flex', clearProps: 'padding' });
+    const { paddingTop, paddingRight, paddingBottom, paddingLeft } = getComputedStyle(lightbox);
+    gsap.set(lightbox, { top: rect.top, left: rect.left, width: rect.width, height: rect.height, padding: 0, opacity: 1 });
+    gsap.set('.media-lightbox__close', { opacity: 0 });
+
+    this.mediaLightboxTween = gsap.timeline()
+      .to(lightbox, {
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        paddingTop,
+        paddingRight,
+        paddingBottom,
+        paddingLeft,
+        duration: 0.6,
+        ease: 'power3.inOut',
+        onComplete: () => { gsap.set(lightbox, { clearProps: 'padding' }); },
+      })
+      .to('.media-lightbox__close', { opacity: 1, duration: 0.2, ease: 'power1.out' });
+
+    document.body.style.overflow = 'hidden';
+    this.lenis?.stop();
+
+    this.mediaLightboxKeydownHandler = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') this.closeMedia();
+    };
+    window.addEventListener('keydown', this.mediaLightboxKeydownHandler);
+  }
+
+  closeMedia() {
+    if (!this.activeMedia) return;
+
+    const lightbox = this.mediaLightboxRef.nativeElement;
+    const onComplete = () => {
+      gsap.set(lightbox, { display: 'none' });
+      this.activeMedia = null;
+      this.mediaOrigin = null;
+      this.cdr.detectChanges(); // desmonta el <video> para que deje de reproducirse
+    };
+
+    this.mediaLightboxTween?.kill();
+    gsap.set('.media-lightbox__close', { opacity: 0 });
+
+    // Con el scroll bloqueado la captura sigue donde estaba al abrir.
+    const rect = this.mediaOrigin?.isConnected ? this.mediaOrigin.getBoundingClientRect() : null;
+    this.mediaLightboxTween = rect
+      ? gsap.to(lightbox, {
+          top: rect.top,
+          left: rect.left,
+          width: rect.width,
+          height: rect.height,
+          padding: 0,
+          duration: 0.5,
+          ease: 'power3.inOut',
+          onComplete,
+        })
+      : gsap.to(lightbox, { opacity: 0, duration: 0.25, ease: 'power1.in', onComplete });
+
+    document.body.style.overflow = '';
+    this.lenis?.start();
+
+    if (this.mediaLightboxKeydownHandler) {
+      window.removeEventListener('keydown', this.mediaLightboxKeydownHandler);
+      this.mediaLightboxKeydownHandler = null;
     }
   }
 

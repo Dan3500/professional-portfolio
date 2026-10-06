@@ -43,11 +43,12 @@
                   class="shot"
                   [style.--w]="shot.width"
                   [style.aspect-ratio]="shot.ratio"
-                  (click)="mediaOpen.emit(shot)"
+                  (click)="mediaOpen.emit({ media: shot, origin: $any($event.currentTarget) })"
                   aria-label="Ampliar"
                 >
                   @if (shot.type === 'video') {
-                    <video class="shot__media" [src]="shot.src" autoplay muted [muted]="true" [volume]="0" loop playsinline preload="metadata"></video>
+                    <!-- Sin autoplay: lo reproduce/pausa un IntersectionObserver según esté en pantalla (ver observeShotVideos). -->
+                    <video class="shot__media" [src]="shot.src" muted [muted]="true" [volume]="0" loop playsinline preload="none"></video>
                   } @else {
                     <img class="shot__media" [src]="shot.src" alt="" loading="lazy" decoding="async" />
                   }

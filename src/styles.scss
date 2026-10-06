@@ -3,24 +3,28 @@
   src: url('/assets/fonts/Montserrat/static/Montserrat-Regular.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
+  font-display: swap;
 }
 @font-face {
   font-family: 'Montserrat';
   src: url('/assets/fonts/Montserrat/static/Montserrat-Bold.ttf') format('truetype');
   font-weight: 700;
   font-style: normal;
+  font-display: swap;
 }
 @font-face {
   font-family: 'Montserrat';
   src: url('/assets/fonts/Montserrat/static/Montserrat-Italic.ttf') format('truetype');
   font-weight: 400;
   font-style: italic;
+  font-display: swap;
 }
 @font-face {
   font-family: 'Montserrat';
   src: url('/assets/fonts/Montserrat/static/Montserrat-BoldItalic.ttf') format('truetype');
   font-weight: 700;
   font-style: italic;
+  font-display: swap;
 }
 
 $color-primary: #1d95ff;     // azul principal

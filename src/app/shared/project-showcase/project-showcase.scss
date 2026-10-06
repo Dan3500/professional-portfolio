@@ -7,10 +7,11 @@
   --bg-0: #0d0d19;
   --bg-1: #151525;
   --bg: linear-gradient(90deg, var(--bg-0) 0%, var(--bg-1) 100%);
-  --cream: #fff5c4;
-  --pink: #fca3ba;
+  // Paleta de textos alineada con la de styles.scss (azules/cyan/esmeralda).
+  --cream: #{$color-quaternary}; // titulares, citas y borde hover de las capturas
+  --pink: #{$color-secondary}; // subtítulos
   --text: #f8f8f8;
-  --footer-line: linear-gradient(90deg, #6d4bd8, #f08ab0 40%, #f7a35c 70%, #fbd27a);
+  --footer-line: linear-gradient(90deg, #{$color-primary-bold}, #{$color-primary} 40%, #{$color-secondary} 70%, #{$color-tertiary});
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
   --column-start: 19vw;
@@ -197,10 +198,11 @@
   gap: 10px;
   min-height: calc(var(--overlap) + 30vh);
   margin-top: 25vh;
-  margin-left: 46vw;
+  // Columna A (40vw) + B (22vw) ≈ 62vw de ancho total.
+  margin-left: var(--column-start);
 
   [data-align='right'] & {
-    margin-left: 8vw;
+    margin-left: 12vw;
   }
 
   &__col {
