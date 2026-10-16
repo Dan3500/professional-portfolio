@@ -8,7 +8,9 @@
   background-color: $bg-color;
 }
 
-$logo-gradient: linear-gradient(135deg, $color-secondary 0%, $color-primary 25%, $color-secondary 50%, $color-primary 75%, $color-secondary 100%);
+// Máscara del logo y enlaces de contacto. Al doble de tamaño que su caja:
+// gradient-shift la recorre de punta a punta (verde → morado → verde).
+$logo-gradient: linear-gradient(135deg, $brand-stops);
 
 #mask {
   position: fixed;
@@ -29,7 +31,7 @@ $logo-gradient: linear-gradient(135deg, $color-secondary 0%, $color-primary 25%,
   mask-mode: alpha;
   -webkit-mask-mode: alpha;
   background: $logo-gradient;
-  background-size: 400% 400%;
+  background-size: 200% 200%;
   animation: gradient-shift 10s ease-in-out infinite;
   animation-play-state: paused;
   opacity: 0.90;
@@ -174,18 +176,34 @@ $logo-gradient: linear-gradient(135deg, $color-secondary 0%, $color-primary 25%,
   50%       { transform: translate(-10%, 9px); }
 }
 
-#section-2 {
+// Textos de las secciones 2 y 3: entran con una máscara circular, crecen con
+// el scroll y un degradado los recorre de verde a cian y a morado (la 2) o al
+// revés (la 3).
+//
+// Se maquetan ya a su tamaño máximo y GSAP los escala de 0.76 a 1 (antes, de
+// 1 a 1.65): con capa propia (will-change) el navegador rasteriza el texto una
+// sola vez a tamaño real y el zoom lo hace la GPU, sin repintar cada fotograma
+// y sin que se vea borroso al ampliarse. Tiene que coincidir con
+// INTRO_TEXT_SCALE en index.ts.
+$intro-text-scale: 1.65;
+
+// Verde → cian → morado, 2.5 veces más ancho que el texto: en cada momento
+// domina uno de los tres y se intuye el siguiente.
+$intro-sweep: linear-gradient(100deg, $color-tertiary 0%, $color-secondary 50%, $color-violet 100%);
+
+#section-2,
+#section-3 {
   position: fixed;
-  top: 50%;
+  // Centrados en el hueco que queda bajo el logo (que acaba arriba, en ~15vh
+  // de alto), no en la pantalla entera: si no, al crecer, el título de dos
+  // líneas de la sección 3 se mete debajo del logo.
+  top: calc(50% + 7vh);
   left: 50%;
-  width: 80%;
-  max-width: 700px;
+  width: 80% * $intro-text-scale;
+  max-width: 700px * $intro-text-scale;
   opacity: 0;
   font-family: $font-montserrat;
-  // GSAP anima estos colores frame a frame
-  --sec2-c1: #{$color-primary};
-  --sec2-c2: #{$color-secondary};
-  --sec2-c3: #{$color-tertiary};
+  will-change: transform, opacity;
 
   -webkit-mask-image: radial-gradient(circle, black 30%, transparent 70%);
   mask-image: radial-gradient(circle, black 30%, transparent 70%);
@@ -196,87 +214,46 @@ $logo-gradient: linear-gradient(135deg, $color-secondary 0%, $color-primary 25%,
   -webkit-mask-position: center;
   mask-position: center;
 
-  background: radial-gradient(
-    circle at 50% 50%,
-    var(--sec2-c1) 0%,
-    var(--sec2-c1) 55%, 
-    var(--sec2-c2) 75%,
-    var(--sec2-c3) 95%,
-    transparent 110%
-  );
+  background: $intro-sweep;
+  background-size: 250% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
 
+  // El tamaño depende también del alto (min con vh): en pantallas bajas el
+  // bloque no cabría en vertical. Calibrado para no cambiar nada a partir de
+  // ~740px de alto.
   h2 {
-    font-size: clamp(2rem, 4.1vw, 3.2rem);
-    margin: 0 0 1rem;
+    font-size: clamp(2rem * $intro-text-scale, min(4.1vw * $intro-text-scale, 11.4vh), 3.2rem * $intro-text-scale);
+    margin: 0 0 1rem * $intro-text-scale;
     line-height: 1.1;
   }
 
   p {
-    font-size: clamp(1.15rem, 2.2vw, 1.8rem);
+    font-size: clamp(1.15rem * $intro-text-scale, min(2.2vw * $intro-text-scale, 6.4vh), 1.8rem * $intro-text-scale);
     line-height: 1.5;
     margin: 0;
   }
+}
+
+// La posición del degradado la anima GSAP: la 2 va de 0% a 100% (verde →
+// morado) y la 3 al revés, con los colores fluyendo hacia el otro lado.
+#section-2 {
+  background-position: 0% 50%;
 }
 
 #section-3 {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  width: 80%;
-  max-width: 700px;
-  opacity: 0;
-  font-family: $font-montserrat;
-  --sec3-c1: #{$color-primary};
-  --sec3-c2: #{$color-secondary};
-  --sec3-c3: #{$color-tertiary};
-
-  -webkit-mask-image: radial-gradient(circle, black 30%, transparent 70%);
-  mask-image: radial-gradient(circle, black 30%, transparent 70%);
-  -webkit-mask-size: 0vmax 0vmax;
-  mask-size: 0vmax 0vmax;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
-
-  background: radial-gradient(
-    circle at 50% 50%,
-    var(--sec3-c1) 0%,
-    var(--sec3-c1) 55%,
-    var(--sec3-c2) 75%,
-    var(--sec3-c3) 95%,
-    transparent 110%
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-
-  h2 {
-    font-size: clamp(2rem, 4.1vw, 3.2rem);
-    margin: 0 0 1rem;
-    text-align: right;
-    line-height: 1.1;
-  }
-
-  p {
-    font-size: clamp(1.15rem, 2.2vw, 1.8rem);
-    text-align: right;
-    line-height: 1.5;
-    margin: 0;
-  }
+  background-position: 100% 50%;
+  text-align: right;
 }
 
-// GSAP escala estas secciones hasta 1.65x; por debajo de 900px el 80%
-// se sale de pantalla, así que aquí baja a un 58% (58% × 1.65 ≈ 96%).
+// Al tamaño máximo, por debajo de 900px el 80% se sale de pantalla: aquí
+// baja a un 58% (58% × 1.65 ≈ 96%).
 @media (max-width: 900px) {
   #section-2,
   #section-3 {
-    width: 58%;
+    width: 58% * $intro-text-scale;
   }
 }
 
@@ -703,7 +680,7 @@ $logo-gradient: linear-gradient(135deg, $color-secondary 0%, $color-primary 25%,
   &__contact-link {
     color: transparent;
     background: $logo-gradient;
-    background-size: 400% 400%;
+    background-size: 200% 200%;
     -webkit-background-clip: text;
     background-clip: text;
     animation: gradient-shift 10s ease-in-out infinite;

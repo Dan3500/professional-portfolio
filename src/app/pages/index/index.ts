@@ -11,6 +11,16 @@ gsap.registerPlugin(ScrollTrigger);
 // direcciones del móvil se encoge/expande.
 ScrollTrigger.config({ ignoreMobileResize: true });
 
+// Escala máxima de los textos de las secciones 2 y 3, que se maquetan ya a ese
+// tamaño y se animan por debajo de 1 (ver $intro-text-scale en index.scss).
+// La máscara circular se amplía en la misma proporción para que se abra igual.
+const INTRO_TEXT_SCALE = 1.65;
+const INTRO_TEXT_MASK_OPEN = `${300 * INTRO_TEXT_SCALE}vmax ${300 * INTRO_TEXT_SCALE}vmax`;
+// Tramo del timeline en que el degradado recorre los textos (en unidades del
+// timeline, desde que empieza a abrirse su máscara).
+const INTRO_COLOR_DELAY = 0.35;
+const INTRO_COLOR_DURATION = 0.8;
+
 interface Project {
   image: string;
   title: string;
@@ -703,30 +713,21 @@ export class Index implements AfterViewInit, OnDestroy {
         },
       }, '<0.6')
 
-      .to('#section-2', { maskSize: '300vmax 300vmax', opacity: 1, visibility: 'visible', ease: 'power2.out', duration: 1.1 }, '>-1.2')
+      .to('#section-2', { maskSize: INTRO_TEXT_MASK_OPEN, opacity: 1, visibility: 'visible', ease: 'power2.out', duration: 1.1 }, '>-1.2')
       .addLabel('section2Start', '<')
-      .fromTo('#section-2', { scale: 1.25 }, {
-        '--sec2-c1': '#34d399',
-        '--sec2-c2': '#1d95ff',
-        '--sec2-c3': '#22d3ee',
-        scale: 1.65,
-        ease: 'none',
-        duration: 1.6,
-      }, '<')
-      .to('#section-2', { maskSize: '0vmax 0vmax', opacity: 0, ease: 'power2.in', duration: 0.8 }, '<+=0.65')
+      .fromTo('#section-2', { scale: 1.25 / INTRO_TEXT_SCALE }, { scale: 1, ease: 'none', duration: 1.6 }, 'section2Start')
+      // Verde → cian → morado, solo mientras el texto se ve opaco: arranca con
+      // la máscara ya casi abierta y termina cuando el fade de salida empieza
+      // a notarse. Si no, el primer y el último color pasan semitransparentes.
+      .to('#section-2', { backgroundPosition: '100% 50%', ease: 'none', duration: INTRO_COLOR_DURATION }, `section2Start+=${INTRO_COLOR_DELAY}`)
+      .to('#section-2', { maskSize: '0vmax 0vmax', opacity: 0, ease: 'power2.in', duration: 0.8 }, 'section2Start+=0.65')
 
-      .to('#section-3', {
-        '--sec3-c1': '#f59e0b',
-        '--sec3-c2': '#ef4444',
-        '--sec3-c3': '#a855f7',
-        maskSize: '300vmax 300vmax',
-        opacity: 1,
-        visibility: 'visible',
-        ease: 'power2.out',
-        duration: 1.1,
-      }, '>')
-      .fromTo('#section-3', { scale: 1.25 }, { scale: 1.65, ease: 'none', duration: 1.6 }, '<')
-      .to('#section-3', { maskSize: '0vmax 0vmax', opacity: 0, ease: 'power2.in', duration: 0.8 }, '<+=0.65')
+      .to('#section-3', { maskSize: INTRO_TEXT_MASK_OPEN, opacity: 1, visibility: 'visible', ease: 'power2.out', duration: 1.1 }, '>')
+      .addLabel('section3Start', '<')
+      .fromTo('#section-3', { scale: 1.25 / INTRO_TEXT_SCALE }, { scale: 1, ease: 'none', duration: 1.6 }, 'section3Start')
+      // Morado → cian → verde, con el mismo tramo opaco que la sección 2.
+      .to('#section-3', { backgroundPosition: '0% 50%', ease: 'none', duration: INTRO_COLOR_DURATION }, `section3Start+=${INTRO_COLOR_DELAY}`)
+      .to('#section-3', { maskSize: '0vmax 0vmax', opacity: 0, ease: 'power2.in', duration: 0.8 }, 'section3Start+=0.65')
 
       .to('#section-4', { opacity: 1, y: '0vh', ease: 'power2.out', duration: 1.2 }, '<+=0.55')
       .addLabel('s4Settled')

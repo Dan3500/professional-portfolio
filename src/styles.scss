@@ -32,6 +32,12 @@ $color-primary-light: #93c5fd; // azul claro
 $color-primary-bold: #1e40af;  // azul índigo oscuro
 $color-secondary: #22d3ee;   // cyan-teal (verde ajustado al azul)
 $color-tertiary: #34d399;    // esmeralda fresca
+$color-indigo: #6366f1;      // índigo
+$color-violet: #a855f7;      // violeta
+
+// Paleta de marca de verde a morado: la recorren los textos de la intro, la
+// máscara del logo, los enlaces de contacto y la scrollbar.
+$brand-stops: $color-tertiary 0%, $color-secondary 25%, $color-primary 50%, $color-indigo 75%, $color-violet 100%;
 $color-quaternary: #e0f2fe;  // azul muy claro (fallback/texto)
 $bg-color: #111318;
 
@@ -53,14 +59,14 @@ html, body {
   height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: $color-primary;
+  background: linear-gradient(to bottom, $brand-stops);
   border-radius: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 
-/* Firefox */
+/* Firefox: solo admite un color plano, se usa el azul central de la paleta */
 * {
   scrollbar-width: thin;
   scrollbar-color: $color-primary transparent;
