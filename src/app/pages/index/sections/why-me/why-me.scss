@@ -1,0 +1,142 @@
+@use '../../../../../tokens' as *;
+
+#section-4 {
+  position: fixed;
+  // top:0, no top:50%+translateY: el pin de GSAP convierte a .app-container
+  // en containing block y el 50% se calcularía contra su alto (con el
+  // spacer incluido), no el del viewport.
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  z-index: 20;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  overflow: hidden;
+  color: white;
+  font-family: $font-montserrat;
+  --edge-fade: 0; // controlado por GSAP: 1 solo mientras el panel está asentado
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 120px;
+    z-index: 2;
+    pointer-events: none;
+    opacity: var(--edge-fade);
+  }
+
+  &::before {
+    top: 0;
+    background: linear-gradient(to bottom, $bg-color 0%, transparent 100%);
+  }
+
+  &::after {
+    bottom: 0;
+    background: linear-gradient(to top, $bg-color 0%, transparent 100%);
+  }
+
+  .section-4__title {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    padding: 0 0 0 4rem;
+
+    h2 {
+      font-size: clamp(2rem, 3.2vw, 3rem);
+      margin: 0;
+      --gradient-duration: 20s;
+      --gradient-delay: -6s;
+    }
+  }
+
+  .section-4__content {
+    flex: 0 1 calc(900px + 5rem);
+    min-width: 0;
+    height: 100%;
+    padding: 0 2.5rem;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .section-4__list {
+    width: 100%;
+    max-width: 900px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    will-change: transform;
+
+    li {
+      padding: 2rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 1.1rem;
+      line-height: 1.6;
+    }
+  }
+}
+
+// Título arriba y lista debajo: la fila 25%/75% deja el título demasiado estrecho aquí.
+@media (max-width: 900px) {
+  #section-4 {
+    display: block;
+
+    // el difuminado ya no encaja con la sección entera (el título tiene
+    // su propia franja); se mueve a .section-4__content de abajo
+    &::before,
+    &::after {
+      content: none;
+    }
+
+    .section-4__title {
+      width: 100%;
+      height: 22vh;
+      align-items: flex-end; // centrado se solapaba con el logo "VI" fijo arriba
+      padding: 1.5rem 2.5rem 0.75rem;
+
+      h2 {
+        font-size: clamp(2rem, 9vw, 3rem);
+      }
+    }
+
+    .section-4__content {
+      width: 100%;
+      height: 78vh;
+      padding: 0 2.5rem;
+      position: relative;
+
+      &::before,
+      &::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 48px;
+        z-index: 2;
+        pointer-events: none;
+        opacity: var(--edge-fade);
+      }
+
+      &::before {
+        top: 0;
+        background: linear-gradient(to bottom, $bg-color 0%, transparent 100%);
+      }
+
+      &::after {
+        bottom: 0;
+        background: linear-gradient(to top, $bg-color 0%, transparent 100%);
+      }
+    }
+  }
+}

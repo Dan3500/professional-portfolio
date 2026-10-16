@@ -1,0 +1,295 @@
+@use '../../../../../tokens' as *;
+
+#mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1000;
+  pointer-events: none; // el mask-image no debe bloquear los clics de las secciones de detrás
+  -webkit-mask-image: url(../../../../../../public/assets/img/logo-vi.svg);
+  mask-image: url(../../../../../../public/assets/img/logo-vi.svg);
+  -webkit-mask-size: clamp(4500dvh, 1250%, 0vh);
+  mask-size: clamp(4500dvh, 1250%, 0vh);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center 5%;
+  mask-position: center 5%;
+  mask-mode: alpha;
+  -webkit-mask-mode: alpha;
+  overflow: hidden;
+  opacity: 0.90;
+
+  // El degradado va en una capa propia que se desplaza con transform: la mueve
+  // la GPU sin repintar (animar background-position repintaba el elemento
+  // entero, a pantalla completa, en cada fotograma). Arranca en pausa y lo
+  // pone en marcha index.ts cuando la intro empieza a desvanecerse.
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: 0;
+    z-index: -1;
+    width: 200%;
+    height: 200%;
+    background: $logo-gradient;
+    will-change: transform;
+    animation: logo-gradient-slide 10s ease-in-out infinite paused;
+  }
+
+  &.mask--gradient-running::before {
+    animation-play-state: running;
+  }
+}
+
+@keyframes logo-gradient-slide {
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(-50%); }
+}
+
+// Portada: fondo de color (base índigo + manchas de la paleta) para que, al
+// encogerse dentro del logo, contraste con el marino del resto de la página.
+.intro-section {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: linear-gradient(160deg, #182456 0%, #111a3d 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  // Con la portada ya invisible (ver setIntroPaused en index.ts) no tiene
+  // sentido seguir animando nada de ella.
+  &--paused .intro-aurora__blob,
+  &--paused .intro-avatar::before,
+  &--paused .intro-arrow__chevron {
+    animation-play-state: paused;
+  }
+}
+
+// Manchas de color que ondulan despacio por el fondo. Solo se animan con
+// transform: se pintan una vez y las mueve la GPU, sin repintar.
+.intro-aurora {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+
+  // Degradados radiales ya difuminados de por sí (sin filter: blur).
+  &__blob {
+    position: absolute;
+    border-radius: 50%;
+    // Centro en (--blob-cx, --blob-cy), al azar en cada carga (ver
+    // placeAuroraBlobs en index.ts); los valores de cada mancha son el
+    // reparto por defecto si no hay JS.
+    left: calc(var(--blob-cx) - var(--blob-size) / 2);
+    top: calc(var(--blob-cy) - var(--blob-size) / 2);
+    width: var(--blob-size);
+    height: var(--blob-size);
+    --blob-size: 75vmax;
+    will-change: translate, transform, scale;
+    // Tres oscilaciones independientes (horizontal, vertical y tamaño), cada
+    // una con su ritmo: combinadas trazan curvas que no se repiten igual y sin
+    // paradas, como algo que flota. Usan las propiedades translate, transform
+    // y scale por separado para no pisarse entre sí.
+    animation:
+      blob-x var(--blob-x, 26s) ease-in-out infinite alternate,
+      blob-y var(--blob-y, 34s) ease-in-out infinite alternate,
+      blob-breathe var(--blob-breathe, 21s) ease-in-out infinite alternate;
+
+    &--green {
+      --blob-cx: 15%;
+      --blob-cy: 10%;
+      background: radial-gradient(circle, rgba($color-tertiary, 0.45) 0%, rgba($color-tertiary, 0.27) 25%, rgba($color-tertiary, 0.1) 48%, rgba($color-tertiary, 0) 68%);
+    }
+
+    &--cyan {
+      --blob-cx: 90%;
+      --blob-cy: 40%;
+      background: radial-gradient(circle, rgba($color-secondary, 0.4) 0%, rgba($color-secondary, 0.24) 25%, rgba($color-secondary, 0.09) 48%, rgba($color-secondary, 0) 68%);
+      --blob-x: 31s;
+      --blob-y: 24s;
+      --blob-breathe: 27s;
+      animation-delay: -12s, -7s, -15s;
+    }
+
+    // La del azul principal, más grande e intensa: es la que domina.
+    &--blue {
+      --blob-cx: 45%;
+      --blob-cy: 95%;
+      --blob-size: 95vmax;
+      background: radial-gradient(circle, rgba($color-primary, 0.7) 0%, rgba($color-primary, 0.42) 25%, rgba($color-primary, 0.15) 48%, rgba($color-primary, 0) 68%);
+      --blob-x: 37s;
+      --blob-y: 29s;
+      --blob-breathe: 23s;
+      animation-delay: -20s, -4s, -9s;
+    }
+  }
+}
+
+@keyframes blob-x {
+  from { translate: -7vmax 0; }
+  to   { translate: 7vmax 0; }
+}
+
+@keyframes blob-y {
+  from { transform: translateY(-5vmax); }
+  to   { transform: translateY(5vmax); }
+}
+
+@keyframes blob-breathe {
+  from { scale: 0.94; }
+  to   { scale: 1.08; }
+}
+
+
+
+#particles-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.intro-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  color: white;
+  font-family: $font-montserrat;
+  padding: 0 1.5rem;
+  box-sizing: border-box;
+}
+
+// "Hello! I'm" pequeño y el nombre muy grande. El texto se escribe en
+// __live, superpuesto a __ghost (el texto completo, invisible), que es el que
+// da el tamaño: así nada se mueve mientras se teclea.
+.intro-title {
+  position: relative;
+  margin: 0;
+  font-size: clamp(1.15rem, 2.2vw, 1.8rem);
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: 0.02em;
+
+  &__ghost {
+    visibility: hidden;
+    white-space: pre-wrap; // como .typed-text, para el salto de línea de fullText
+  }
+
+  &__live {
+    position: absolute;
+    inset: 0;
+  }
+
+  // Estilos del nombre (.highlight) y de su ola: en styles.scss, porque el que
+  // se va escribiendo se crea con innerHTML y no lleva el atributo con el que
+  // Angular aísla los estilos de este componente.
+}
+
+.typed-text {
+  white-space: pre-wrap; // conserva el salto de línea manual pero permite wrap en pantallas estrechas
+  color: rgba(255, 255, 255, 0.85);
+}
+
+
+.intro-role {
+  margin: 1rem 0 0;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: clamp(0.85rem, 1.3vw, 1.1rem);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  opacity: 0;
+
+  // En pantallas estrechas el espaciado amplio partía la línea en dos.
+  @media (max-width: 480px) {
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+  }
+
+  @media (max-width: 360px) {
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+  }
+}
+
+// Anillo de degradado girando: un cuadrado con conic-gradient más grande que
+// el avatar, rotado con transform y recortado por el círculo.
+.intro-avatar {
+  position: relative;
+  width: clamp(90px, 12vw, 130px);
+  height: clamp(90px, 12vw, 130px);
+  margin: 2rem auto 0;
+  padding: 3px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba($color-primary, 0.35);
+  opacity: 0;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -50%;
+    background: conic-gradient($color-tertiary, $color-secondary 12%, $color-primary 25%, $color-primary 65%, $color-indigo 80%, $color-violet 90%, $color-tertiary);
+    animation: avatar-ring 6s linear infinite;
+  }
+
+  img {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    background: #111a3d;
+  }
+}
+
+@keyframes avatar-ring {
+  to { transform: rotate(360deg); }
+}
+
+.intro-arrow {
+  position: absolute;
+  left: 50%;
+  bottom: 2.5rem;
+  z-index: 2;
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
+  opacity: 0;
+
+  &__chevron {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: solid rgba(255, 255, 255, 0.8);
+    border-width: 0 3px 3px 0;
+    animation: chevron-bounce 2s ease-in-out infinite;
+  }
+}
+
+@keyframes chevron-bounce {
+  0%, 100% { transform: translate(0, 0) rotate(45deg); }
+  50%       { transform: translate(0, 6px) rotate(45deg); }
+}
+
+// "Reducir movimiento": fuera los bucles decorativos. Al final del archivo para
+// que gane a las reglas que declaran esas animaciones.
+@media (prefers-reduced-motion: reduce) {
+  .intro-aurora__blob,
+  .intro-avatar::before,
+  .intro-arrow__chevron,
+  #mask::before {
+    animation: none;
+  }
+}

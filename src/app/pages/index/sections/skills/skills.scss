@@ -1,0 +1,111 @@
+@use '../../../../../tokens' as *;
+
+.section-5 {
+  position: fixed;
+  top: 50%;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: clamp(1.5rem, 3vw, 3rem) 0;
+  color: white;
+  font-family: $font-montserrat;
+  opacity: 0;
+  pointer-events: none;
+  box-sizing: border-box;
+
+  &__header {
+    width: 100%;
+    margin: 0 0 1.5rem;
+    padding: 0 3rem 0 var(--title-inset);
+    box-sizing: border-box;
+    text-align: left;
+
+    h2 {
+      font-size: clamp(2rem, 4vw, 3rem);
+      margin: 0 0 0.4rem;
+      --gradient-duration: 26s;
+      --gradient-delay: -15s;
+    }
+
+    p {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.75);
+      font-size: 1rem;
+    }
+  }
+
+  &__viewport {
+    width: 100%;
+    overflow: hidden;
+    padding: 0 3rem;
+    box-sizing: border-box;
+    margin: 0;
+  }
+
+  @media (max-width: 900px) {
+    &__header,
+    &__viewport {
+      padding: 0 1.5rem;
+    }
+  }
+
+  &__track {
+    display: flex;
+    gap: 1.25rem;
+    width: max-content;
+    align-items: stretch;
+    will-change: transform;
+    padding-left: 0.25rem;
+  }
+
+  &__card {
+    width: min(24vw, 260px);
+    min-width: min(24vw, 260px);
+
+    @media (max-width: 900px) {
+      width: min(48vw, 280px);
+      min-width: min(48vw, 280px);
+    }
+
+    @media (max-width: 520px) {
+      width: min(72vw, 300px);
+      min-width: min(72vw, 300px);
+    }
+
+    height: 300px;
+    padding: 1.5rem;
+    border-radius: 1.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 0.6rem;
+
+    span {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: $color-secondary;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    h3 {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+
+    p {
+      margin: 0;
+      line-height: 1.5;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 0.96rem;
+    }
+  }
+}

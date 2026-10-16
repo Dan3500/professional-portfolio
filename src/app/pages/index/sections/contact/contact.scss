@@ -1,0 +1,182 @@
+@use '../../../../../tokens' as *;
+
+.section-7 {
+  position: relative;
+  width: 100%;
+  background-color: $bg-color;
+  color: white;
+  font-family: $font-montserrat;
+  box-sizing: border-box;
+
+  &__inner {
+    padding: 3.5rem 4rem 4rem var(--title-inset);
+
+    h2 {
+      font-size: clamp(2rem, 4vw, 3rem);
+      margin: 0 0 0.75rem;
+      color: $color-primary;
+    }
+  }
+
+  &__lead {
+    margin: 0 0 2.5rem;
+    color: rgba(255, 255, 255, 0.75);
+    font-size: clamp(1rem, 1.4vw, 1.15rem);
+    max-width: 40ch;
+  }
+
+  &__contact {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.75rem 2rem;
+    margin-bottom: 2.5rem;
+  }
+
+  &__contact-link {
+    // Animados con .animated-gradient, pero con el degradado de la marca.
+    background-image: $logo-gradient;
+    background-size: 200% 200%;
+    --gradient-duration: 9s;
+    --gradient-delay: -6s;
+    font-size: clamp(1.3rem, 2.6vw, 1.9rem);
+    font-weight: 700;
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    transition: border-color 0.2s ease, opacity 0.2s ease;
+
+    & + & {
+      --gradient-duration: 12s;
+      --gradient-delay: -2s;
+    }
+
+    &:hover,
+    &:focus-visible {
+      border-color: $color-secondary;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  &__social {
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    transition: background 0.2s ease, transform 0.2s ease;
+
+    img {
+      width: 20px;
+      height: 20px;
+      object-fit: contain;
+    }
+
+    &:hover,
+    &:focus-visible {
+      background: rgba(255, 255, 255, 0.18);
+      transform: scale(1.06);
+    }
+  }
+
+  // Mismo degradado animado que los enlaces de contacto, en el texto y en el
+  // borde: el fondo tiene dos capas, el color de la sección por dentro
+  // (padding-box) y el degradado asomando por el borde transparente
+  // (border-box). Con hover la capa de dentro se vuelve transparente y el
+  // degradado rellena el botón. Como los enlaces, solo se anima con la
+  // sección en pantalla (ver observeAnimatedGradients en index.ts), con un
+  // ritmo propio para no ir sincronizado con ellos.
+  &__cv {
+    --cv-animation: gradient-shift 11s ease-in-out -4s infinite;
+    display: inline-flex;
+    align-items: center;
+    margin-left: 0.5rem;
+    padding: 0.9rem 1.5rem;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background-image: linear-gradient($bg-color, $bg-color), $logo-gradient;
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+    background-size: 100% 100%, 200% 200%;
+    animation: var(--cv-animation) paused;
+    will-change: transform;
+    font-weight: 700;
+    font-size: 0.95rem;
+    text-decoration: none;
+
+    &.animated-gradient--visible,
+    &.animated-gradient--visible .section-7__cv-label {
+      animation-play-state: running;
+    }
+
+    &:hover,
+    &:focus-visible {
+      background-image: linear-gradient(transparent, transparent), $logo-gradient;
+    }
+  }
+
+  &__cv-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    @include gradient-text($logo-gradient, 200% 200%);
+    animation: var(--cv-animation) paused;
+
+    // Con el botón relleno, el texto pasa a oscuro para que se lea.
+    .section-7__cv:hover &,
+    .section-7__cv:focus-visible & {
+      background: none;
+      -webkit-text-fill-color: $bg-color;
+      color: $bg-color;
+    }
+  }
+
+  &__cv-icon {
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  &__footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1.5rem 4rem;
+
+    p {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 0.85rem;
+    }
+  }
+
+  @media (max-width: 900px) {
+    &__inner {
+      padding: 2.5rem 2rem 3rem;
+    }
+
+    &__footer {
+      padding: 1.25rem 2rem;
+    }
+
+    &__cv {
+      margin-left: 0;
+      width: 100%;
+      justify-content: center;
+    }
+  }
+}
+
+// "Reducir movimiento": sin el degradado animado del botón del CV.
+@media (prefers-reduced-motion: reduce) {
+  .section-7__cv,
+  .section-7__cv-label {
+    animation: none;
+  }
+}
