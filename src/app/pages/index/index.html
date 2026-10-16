@@ -1,12 +1,26 @@
 <!-- #mask va fuera de .app-container: el pin de GSAP le deja un transform residual que rompería los position:fixed de dentro -->
 <div class="mask" id="mask">
     <section id="introduction" class="intro-section">
+            <!-- Manchas de color de la paleta (verde, cian y azul): dan a la portada un fondo vivo que
+                 contrasta con el marino de fuera cuando se encoge en el logo -->
+            <div class="intro-aurora" aria-hidden="true">
+                <span class="intro-aurora__blob intro-aurora__blob--green"></span>
+                <span class="intro-aurora__blob intro-aurora__blob--cyan"></span>
+                <span class="intro-aurora__blob intro-aurora__blob--blue"></span>
+            </div>
             <canvas #particlesCanvas id="particles-canvas"></canvas>
             <div class="intro-content">
-                    <h1>
-                        <span #typedText class="typed-text"></span>
-                        <span class="cursor">|</span>
+                    <h1 class="intro-title" aria-label="Hello! I'm Daniel Soltero">
+                        <!-- Copia invisible del texto completo: reserva su hueco para
+                             que nada se mueva mientras se escribe -->
+                        <span #typedGhost class="intro-title__ghost" aria-hidden="true"></span>
+                        <span class="intro-title__live" aria-hidden="true">
+                            <!-- El cursor lo añade renderTypedText junto a la última letra escrita -->
+                            <span #typedText class="typed-text"></span>
+                        </span>
                     </h1>
+                    <!-- TODO: ajustar a tu rol real -->
+                    <p #introRole class="intro-role">Frontend Developer · Tech Lead</p>
                     <div #introAvatar class="intro-avatar">
                         <img src="assets/img/avatar.jpg" alt="Daniel Soltero" />
                     </div>
@@ -30,7 +44,7 @@
 
     <section id="section-4" class="section-4">
         <div class="section-4__title mx-0">
-            <h2>Why me?</h2>
+            <h2 class="wave-title">Why me?</h2>
         </div>
         <div class="section-4__content">
             <ul class="section-4__list">
@@ -50,7 +64,7 @@
 
     <section id="section-5" class="section-5">
         <div class="section-5__header">
-            <h2>Skills</h2>
+            <h2 class="wave-title">Skills</h2>
         </div>
         <div class="section-5__viewport">
             <div class="section-5__track">
@@ -69,8 +83,6 @@
     </section>
 
     <div class="section-5__spacer"></div>
-
-    <span class="arrow">↓</span>
 </div>
 
 <section id="section-project-stories" class="section-project-stories">
@@ -83,8 +95,8 @@
         <p class="section-7__lead">¿Tienes un proyecto en mente? Escríbeme o descarga mi CV.</p>
 
         <div class="section-7__contact">
-            <a class="section-7__contact-link" href="mailto:hola@danielsoltero.dev">hola&#64;danielsoltero.dev</a>
-            <a class="section-7__contact-link" href="tel:+34600000000">+34 600 000 000</a>
+            <a class="section-7__contact-link animated-gradient" href="mailto:hola@danielsoltero.dev">hola&#64;danielsoltero.dev</a>
+            <a class="section-7__contact-link animated-gradient" href="tel:+34600000000">+34 600 000 000</a>
         </div>
 
         <div class="section-7__actions">
@@ -100,8 +112,10 @@
             </a>
 
             <a class="section-7__cv" href="assets/cv/daniel-soltero-cv.pdf" download>
-                Descargar CV
-                <span class="section-7__cv-icon" aria-hidden="true">↓</span>
+                <span class="section-7__cv-label">
+                    Descargar CV
+                    <span class="section-7__cv-icon" aria-hidden="true">↓</span>
+                </span>
             </a>
         </div>
     </div>
@@ -184,7 +198,7 @@
 <div class="menu-overlay" (click)="closeMenu()">
     <nav class="menu-panel" role="dialog" aria-modal="true" aria-label="Menú de navegación" (click)="$event.stopPropagation()">
         <button type="button" class="menu-panel__item" (click)="goToTop()">Inicio</button>
-        <button type="button" class="menu-panel__item" (click)="goToLabel('section2Start')">Who I am</button>
+        <button type="button" class="menu-panel__item" (click)="goToLabel('section2Visible')">Who I am</button>
         <button type="button" class="menu-panel__item" (click)="goToLabel('s4Settled')">Why me?</button>
         <button type="button" class="menu-panel__item" (click)="goToLabel('s5Opaque')">Skills</button>
         <button type="button" class="menu-panel__item" (click)="goToElement('section-project-stories')">Projects</button>

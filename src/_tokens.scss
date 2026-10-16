@@ -1,0 +1,49 @@
+// Tokens de diseño (colores, paleta y fuentes). Solo variables: no genera
+// CSS, así que los componentes pueden importarlo con @use sin arrastrar el
+// CSS global de styles.scss (los @font-face, la scrollbar...) a su propio
+// CSS, como pasaba al importar styles.scss directamente.
+
+$color-primary: #1d95ff;     // azul principal
+$color-primary-light: #93c5fd; // azul claro
+$color-primary-bold: #1e40af;  // azul índigo oscuro
+$color-secondary: #22d3ee;   // cyan-teal (verde ajustado al azul)
+$color-tertiary: #34d399;    // esmeralda fresca
+$color-indigo: #6366f1;      // índigo
+$color-violet: #7b68ee;      // azul violáceo: cierra la paleta con un toque morado sin que domine
+
+// Paleta de marca de verde a azul violáceo, con el azul principal ocupando el
+// tramo central y más largo: es el color que más se ve. La recorren la
+// máscara del logo, los enlaces de contacto y la scrollbar.
+$brand-stops: $color-tertiary 0%, $color-secondary 15%, $color-primary 32%, $color-primary 68%, $color-indigo 85%, $color-violet 100%;
+$color-quaternary: #e0f2fe;  // azul muy claro (fallback/texto)
+$bg-color: #111318;
+
+$font-montserrat: 'Montserrat', sans-serif;
+$font-montserrat-regular: 'Montserrat', sans-serif;
+$font-montserrat-bold: 'Montserrat', sans-serif;
+$font-montserrat-bold-italic: 'Montserrat-BoldItalic', 'Montserrat', sans-serif;
+
+// Degradados compartidos por la página y el CSS global (styles.scss).
+
+// Máscara del logo, enlaces de contacto y botón del CV, al doble de tamaño que
+// su caja para recorrerla de punta a punta (verde → azul violáceo → verde).
+$logo-gradient: linear-gradient(135deg, $brand-stops);
+
+// Tercer color de los degradados de títulos y textos: un azul índigo oscuro
+// (antes un magenta morado), distinto del azul principal pero sin morado.
+$color-deep-blue: #5865f2;
+
+// Menta → azul principal → azul índigo oscuro, con el azul ocupando el tramo
+// central y más largo (es el color que más se ve) y transiciones cortas para
+// que el cambio de color se note al moverse.
+$intro-sweep: linear-gradient(115deg, #34d399 0%, #34d399 6%, $color-primary 30%, $color-primary 70%, $color-deep-blue 94%, $color-deep-blue 100%);
+
+// Texto recortado con un degradado más ancho que él, para poder desplazarlo.
+@mixin gradient-text($gradient, $size: 250% 100%) {
+  background: $gradient;
+  background-size: $size;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}

@@ -62,9 +62,10 @@ const TIMING = {
   dimEnd: 'top 50%', // trigger: galería
 } as const;
 
-// Arranque diferido de la extracción de fotogramas para no competir con la
-// animación de entrada de la intro.
-const EXTRACTION_DELAY_MS = 2500;
+// La extracción de fotogramas (que descarga y reproduce cada vídeo entero) no
+// arranca al cargar, sino cuando el bloque de proyectos está a unas 4
+// pantallas: quien no llegue hasta aquí no se descarga los vídeos.
+const EXTRACTION_START = 'top 400%';
 
 @Component({
   selector: 'app-project-showcase',
@@ -104,10 +105,10 @@ export class ProjectShowcase implements AfterViewInit, OnDestroy {
   chapters: Chapter[] = [];
 
   private ctx: gsap.Context | null = null;
+  private extractionReady = false;
   private mm = gsap.matchMedia();
   private frames = new Map<string, VideoFrames>();
   private players: { player: ScrubCanvas; active: boolean }[] = [];
-  private extractionTimeout: ReturnType<typeof setTimeout> | null = null;
   private shotVideoObserver: IntersectionObserver | null = null;
   private resizeHandler = () => this.players.forEach(({ player }) => player.resize());
   private tick = () => this.players.forEach(({ player, active }) => active && player.tick());
@@ -120,18 +121,17 @@ export class ProjectShowcase implements AfterViewInit, OnDestroy {
     window.addEventListener('resize', this.resizeHandler);
     this.observeShotVideos();
     document.fonts?.ready.then(() => ScrollTrigger.refresh());
+  }
 
-    // Extrae los vídeos en orden de aparición mientras el usuario está en la
-    // intro. Si llega antes a un capítulo, ese se adelanta (ver build()).
-    this.extractionTimeout = setTimeout(async () => {
-      for (const frames of this.frames.values()) {
-        await frames.extract().catch(() => {});
-      }
-    }, EXTRACTION_DELAY_MS);
+  // Extrae los vídeos en orden de aparición. Si el usuario llega antes a un
+  // capítulo, ese se adelanta (ver build()).
+  private async extractAll() {
+    for (const frames of this.frames.values()) {
+      await frames.extract().catch(() => {});
+    }
   }
 
   ngOnDestroy() {
-    if (this.extractionTimeout) clearTimeout(this.extractionTimeout);
     this.shotVideoObserver?.disconnect();
     gsap.ticker.remove(this.tick);
     window.removeEventListener('resize', this.resizeHandler);
@@ -184,6 +184,18 @@ export class ProjectShowcase implements AfterViewInit, OnDestroy {
     // Index, que va por encima en la página y cambia su altura al montarse.
     const st = (vars: ScrollTrigger.Vars): ScrollTrigger.Vars => ({ refreshPriority: -1, ...vars });
 
+    // Los triggers se crean antes de que Index monte su pin (que alarga la
+    // página), así que en su primera evaluación el bloque de proyectos parece
+    // estar arriba del todo y "entrarían" nada más cargar. La extracción se
+    // habilita, y su trigger se crea, tras el primer refresh, con el layout
+    // ya definitivo.
+    const onFirstRefresh = () => {
+      ScrollTrigger.removeEventListener('refresh', onFirstRefresh);
+      this.extractionReady = true;
+      ScrollTrigger.create(st({ trigger: root, start: EXTRACTION_START, once: true, onEnter: () => this.extractAll() }));
+    };
+    ScrollTrigger.addEventListener('refresh', onFirstRefresh);
+
     root.querySelectorAll<HTMLElement>('.chapter').forEach((chapter, idx) => {
       const media = chapter.querySelector<HTMLElement>('.chapter__media')!;
       const dimEnter = chapter.querySelector<HTMLElement>('.chapter__dim--enter')!;
@@ -235,7 +247,7 @@ export class ProjectShowcase implements AfterViewInit, OnDestroy {
           end: 'bottom top',
           onToggle: (self) => {
             entry.active = self.isActive;
-            if (self.isActive) frames.extract().catch(() => {});
+            if (self.isActive && this.extractionReady) frames.extract().catch(() => {});
           },
         }));
       }

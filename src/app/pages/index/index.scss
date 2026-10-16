@@ -1,5 +1,15 @@
 @use 'sass:color';
-@use '../../../styles.scss' as *;
+@use '../../../tokens' as *;
+
+// Margen izquierdo de "Why me?", para alinear con él "Skills" y "Let's talk".
+// Su título va centrado junto a la lista: 4rem de padding + el título (que
+// mide ~5 veces su tamaño de letra) + 980px de lista, así que queda en
+// (ancho − todo eso) / 2 + 4rem, y como mínimo en 4rem cuando la lista se
+// encoge. Con 100% (no 100vw, que incluye la scrollbar): se resuelve en el
+// padding de cada sección, contra su ancho, que es el de la ventana.
+:host {
+  --title-inset: max(4rem, calc((100% - 980px - 4rem - 5.02 * clamp(2rem, 3.2vw, 3rem)) / 2 + 4rem));
+}
 
 .app-container {
   width: 100%;
@@ -8,9 +18,12 @@
   background-color: $bg-color;
 }
 
-// Máscara del logo y enlaces de contacto. Al doble de tamaño que su caja:
-// gradient-shift la recorre de punta a punta (verde → morado → verde).
-$logo-gradient: linear-gradient(135deg, $brand-stops);
+// Variante para los textos de "Who I am" / "Tech lead": menos azul y con el
+// magenta morado en lugar del azul índigo de los títulos, para que el menta y
+// el morado se vean más al recorrerlos.
+$intro-text-sweep: linear-gradient(115deg, #34d399 0%, #34d399 11%, $color-primary 36%, $color-primary 64%, #b83fd9 89%, #b83fd9 100%);
+// El mismo, invertido (morado a la izquierda), para "Tech lead".
+$intro-text-sweep-reverse: linear-gradient(115deg, #b83fd9 0%, #b83fd9 11%, $color-primary 36%, $color-primary 64%, #34d399 89%, #34d399 100%);
 
 #mask {
   position: fixed;
@@ -30,28 +43,132 @@ $logo-gradient: linear-gradient(135deg, $brand-stops);
   mask-position: center 5%;
   mask-mode: alpha;
   -webkit-mask-mode: alpha;
-  background: $logo-gradient;
-  background-size: 200% 200%;
-  animation: gradient-shift 10s ease-in-out infinite;
-  animation-play-state: paused;
+  overflow: hidden;
   opacity: 0.90;
+
+  // El degradado va en una capa propia que se desplaza con transform: la mueve
+  // la GPU sin repintar (animar background-position repintaba el elemento
+  // entero, a pantalla completa, en cada fotograma). Arranca en pausa y lo
+  // pone en marcha index.ts cuando la intro empieza a desvanecerse.
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: 0;
+    z-index: -1;
+    width: 200%;
+    height: 200%;
+    background: $logo-gradient;
+    will-change: transform;
+    animation: logo-gradient-slide 10s ease-in-out infinite paused;
+  }
+
+  &.mask--gradient-running::before {
+    animation-play-state: running;
+  }
 }
 
-@keyframes gradient-shift {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+@keyframes logo-gradient-slide {
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(-50%); }
 }
 
+// Portada: fondo de color (base índigo + manchas de la paleta) para que, al
+// encogerse dentro del logo, contraste con el marino del resto de la página.
 .intro-section {
   position: relative;
   width: 100vw;
   height: 100vh;
-  background: white;
+  overflow: hidden;
+  background: linear-gradient(160deg, #182456 0%, #111a3d 100%);
   display: flex;
   align-items: center;
   justify-content: center;
+
+  // Con la portada ya invisible (ver setIntroPaused en index.ts) no tiene
+  // sentido seguir animando nada de ella.
+  &--paused .intro-aurora__blob,
+  &--paused .intro-avatar::before,
+  &--paused .intro-arrow__chevron {
+    animation-play-state: paused;
+  }
 }
+
+// Manchas de color que ondulan despacio por el fondo. Solo se animan con
+// transform: se pintan una vez y las mueve la GPU, sin repintar.
+.intro-aurora {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+
+  // Degradados radiales ya difuminados de por sí (sin filter: blur).
+  &__blob {
+    position: absolute;
+    border-radius: 50%;
+    // Centro en (--blob-cx, --blob-cy), al azar en cada carga (ver
+    // placeAuroraBlobs en index.ts); los valores de cada mancha son el
+    // reparto por defecto si no hay JS.
+    left: calc(var(--blob-cx) - var(--blob-size) / 2);
+    top: calc(var(--blob-cy) - var(--blob-size) / 2);
+    width: var(--blob-size);
+    height: var(--blob-size);
+    --blob-size: 75vmax;
+    will-change: translate, transform, scale;
+    // Tres oscilaciones independientes (horizontal, vertical y tamaño), cada
+    // una con su ritmo: combinadas trazan curvas que no se repiten igual y sin
+    // paradas, como algo que flota. Usan las propiedades translate, transform
+    // y scale por separado para no pisarse entre sí.
+    animation:
+      blob-x var(--blob-x, 26s) ease-in-out infinite alternate,
+      blob-y var(--blob-y, 34s) ease-in-out infinite alternate,
+      blob-breathe var(--blob-breathe, 21s) ease-in-out infinite alternate;
+
+    &--green {
+      --blob-cx: 15%;
+      --blob-cy: 10%;
+      background: radial-gradient(circle, rgba($color-tertiary, 0.45) 0%, rgba($color-tertiary, 0.27) 25%, rgba($color-tertiary, 0.1) 48%, rgba($color-tertiary, 0) 68%);
+    }
+
+    &--cyan {
+      --blob-cx: 90%;
+      --blob-cy: 40%;
+      background: radial-gradient(circle, rgba($color-secondary, 0.4) 0%, rgba($color-secondary, 0.24) 25%, rgba($color-secondary, 0.09) 48%, rgba($color-secondary, 0) 68%);
+      --blob-x: 31s;
+      --blob-y: 24s;
+      --blob-breathe: 27s;
+      animation-delay: -12s, -7s, -15s;
+    }
+
+    // La del azul principal, más grande e intensa: es la que domina.
+    &--blue {
+      --blob-cx: 45%;
+      --blob-cy: 95%;
+      --blob-size: 95vmax;
+      background: radial-gradient(circle, rgba($color-primary, 0.7) 0%, rgba($color-primary, 0.42) 25%, rgba($color-primary, 0.15) 48%, rgba($color-primary, 0) 68%);
+      --blob-x: 37s;
+      --blob-y: 29s;
+      --blob-breathe: 23s;
+      animation-delay: -20s, -4s, -9s;
+    }
+  }
+}
+
+@keyframes blob-x {
+  from { translate: -7vmax 0; }
+  to   { translate: 7vmax 0; }
+}
+
+@keyframes blob-y {
+  from { transform: translateY(-5vmax); }
+  to   { transform: translateY(5vmax); }
+}
+
+@keyframes blob-breathe {
+  from { scale: 0.94; }
+  to   { scale: 1.08; }
+}
+
+
 
 #particles-canvas {
   position: absolute;
@@ -66,42 +183,104 @@ $logo-gradient: linear-gradient(135deg, $brand-stops);
 .intro-content {
   position: relative;
   z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
-  color: black;
+  color: white;
   font-family: $font-montserrat;
   padding: 0 1.5rem;
   box-sizing: border-box;
+}
 
-  h1 {
-    font-size: clamp(1.7rem, 8vw, 3rem);
-    font-weight: 400;
-    margin-bottom: 0.5rem;
-    min-height: 150px;
+// "Hello! I'm" pequeño y el nombre muy grande. El texto se escribe en
+// __live, superpuesto a __ghost (el texto completo, invisible), que es el que
+// da el tamaño: así nada se mueve mientras se teclea.
+.intro-title {
+  position: relative;
+  margin: 0;
+  font-size: clamp(1.15rem, 2.2vw, 1.8rem);
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: 0.02em;
+
+  &__ghost {
+    visibility: hidden;
+    white-space: pre-wrap; // como .typed-text, para el salto de línea de fullText
   }
 
-  .highlight {
-    color: $color-primary;
-    font-weight: bold;
+  &__live {
+    position: absolute;
+    inset: 0;
+  }
+
+  // Estilos del nombre (.highlight) y de su ola: en styles.scss, porque el que
+  // se va escribiendo se crea con innerHTML y no lleva el atributo con el que
+  // Angular aísla los estilos de este componente.
+}
+
+.typed-text {
+  white-space: pre-wrap; // conserva el salto de línea manual pero permite wrap en pantallas estrechas
+  color: rgba(255, 255, 255, 0.85);
+}
+
+
+.intro-role {
+  margin: 1rem 0 0;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: clamp(0.85rem, 1.3vw, 1.1rem);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  opacity: 0;
+
+  // En pantallas estrechas el espaciado amplio partía la línea en dos.
+  @media (max-width: 480px) {
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+  }
+
+  @media (max-width: 360px) {
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
   }
 }
 
+// Anillo de degradado girando: un cuadrado con conic-gradient más grande que
+// el avatar, rotado con transform y recortado por el círculo.
 .intro-avatar {
+  position: relative;
   width: clamp(90px, 12vw, 130px);
   height: clamp(90px, 12vw, 130px);
-  margin: 1.5rem auto 0;
+  margin: 2rem auto 0;
+  padding: 3px;
+  box-sizing: border-box;
   border-radius: 50%;
   overflow: hidden;
-  border: 3px solid $color-primary;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 10px 40px rgba($color-primary, 0.35);
   opacity: 0;
-  transform-style: preserve-3d;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -50%;
+    background: conic-gradient($color-tertiary, $color-secondary 12%, $color-primary 25%, $color-primary 65%, $color-indigo 80%, $color-violet 90%, $color-tertiary);
+    animation: avatar-ring 6s linear infinite;
+  }
 
   img {
+    position: relative;
     width: 100%;
     height: 100%;
+    border-radius: 50%;
     object-fit: cover;
     display: block;
+    background: #111a3d;
   }
+}
+
+@keyframes avatar-ring {
+  to { transform: rotate(360deg); }
 }
 
 .intro-arrow {
@@ -118,7 +297,7 @@ $logo-gradient: linear-gradient(135deg, $brand-stops);
     display: block;
     width: 100%;
     height: 100%;
-    border: solid $color-primary;
+    border: solid rgba(255, 255, 255, 0.8);
     border-width: 0 3px 3px 0;
     animation: chevron-bounce 2s ease-in-out infinite;
   }
@@ -129,56 +308,9 @@ $logo-gradient: linear-gradient(135deg, $brand-stops);
   50%       { transform: translate(0, 6px) rotate(45deg); }
 }
 
-.typed-text {
-  letter-spacing: 0.04em;
-  white-space: pre-wrap; // conserva el salto de línea manual pero permite wrap en pantallas estrechas
-  text-shadow: 0 2px 12px $color-primary;
-  font-family: $font-montserrat;
-
-  .highlight.no-shadow {
-    text-shadow: none !important;
-  }
-}
-
-.cursor {
-  color: $color-primary;
-  margin-left: 2px;
-  animation: blink 0.8s infinite;
-  -webkit-animation: blink 0.8s infinite;
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
-}
-
-.arrow {
-  position: fixed;
-  bottom: 5px;
-  left: 50%;
-  z-index: 100;
-  display: inline-block;
-  font-size: 2.2em;
-  color: $color-primary;
-  margin-left: 0.5em;
-  opacity: 0;
-  transform: translate(-10%, 0);
-  transition: opacity 0.8s ease;
-  animation: arrow-bounce 2.5s infinite;
-
-  &.arrow--visible {
-    opacity: 1;
-  }
-}
-
-@keyframes arrow-bounce {
-  0%, 100% { transform: translate(-10%, 0);  }
-  50%       { transform: translate(-10%, 9px); }
-}
-
 // Textos de las secciones 2 y 3: entran con una máscara circular, crecen con
-// el scroll y un degradado los recorre de verde a cian y a morado (la 2) o al
-// revés (la 3).
+// el scroll y un degradado de colores muy distintos los recorre: la 2 de menta
+// a morado y la 3 al revés.
 //
 // Se maquetan ya a su tamaño máximo y GSAP los escala de 0.76 a 1 (antes, de
 // 1 a 1.65): con capa propia (will-change) el navegador rasteriza el texto una
@@ -186,10 +318,6 @@ $logo-gradient: linear-gradient(135deg, $brand-stops);
 // y sin que se vea borroso al ampliarse. Tiene que coincidir con
 // INTRO_TEXT_SCALE en index.ts.
 $intro-text-scale: 1.65;
-
-// Verde → cian → morado, 2.5 veces más ancho que el texto: en cada momento
-// domina uno de los tres y se intuye el siguiente.
-$intro-sweep: linear-gradient(100deg, $color-tertiary 0%, $color-secondary 50%, $color-violet 100%);
 
 #section-2,
 #section-3 {
@@ -200,7 +328,9 @@ $intro-sweep: linear-gradient(100deg, $color-tertiary 0%, $color-secondary 50%, 
   top: calc(50% + 7vh);
   left: 50%;
   width: 80% * $intro-text-scale;
-  max-width: 700px * $intro-text-scale;
+  // Nunca más ancho que la pantalla (entre ~900 y 1155px se salía por los
+  // lados al llegar a su escala máxima).
+  max-width: min(700px * $intro-text-scale, calc(100vw - 2rem));
   opacity: 0;
   font-family: $font-montserrat;
   will-change: transform, opacity;
@@ -214,12 +344,7 @@ $intro-sweep: linear-gradient(100deg, $color-tertiary 0%, $color-secondary 50%, 
   -webkit-mask-position: center;
   mask-position: center;
 
-  background: $intro-sweep;
-  background-size: 250% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
+  @include gradient-text($intro-text-sweep);
 
   // El tamaño depende también del alto (min con vh): en pantallas bajas el
   // bloque no cabría en vertical. Calibrado para no cambiar nada a partir de
@@ -237,14 +362,16 @@ $intro-sweep: linear-gradient(100deg, $color-tertiary 0%, $color-secondary 50%, 
   }
 }
 
-// La posición del degradado la anima GSAP: la 2 va de 0% a 100% (verde →
-// morado) y la 3 al revés, con los colores fluyendo hacia el otro lado.
+// La posición del degradado la anima GSAP de 0% a 100% en las dos: la 2
+// recorre menta → azul → morado y la 3, con el degradado invertido, lo
+// inverso, morado → azul → menta, empezando con el morado a la izquierda.
 #section-2 {
   background-position: 0% 50%;
 }
 
 #section-3 {
-  background-position: 100% 50%;
+  background-image: $intro-text-sweep-reverse;
+  background-position: 0% 50%;
   text-align: right;
 }
 
@@ -254,6 +381,22 @@ $intro-sweep: linear-gradient(100deg, $color-tertiary 0%, $color-secondary 50%, 
   #section-2,
   #section-3 {
     width: 58% * $intro-text-scale;
+  }
+}
+
+// En móvil, letra algo más pequeña (el mínimo de los clamp de arriba sigue
+// siendo grande para una pantalla estrecha), y limitada por el alto para que
+// en móviles bajos el bloque quepa entero bajo el logo.
+@media (max-width: 768px) {
+  #section-2,
+  #section-3 {
+    h2 {
+      font-size: min(1.8rem * $intro-text-scale, 5.6vh);
+    }
+
+    p {
+      font-size: min(1.05rem * $intro-text-scale, 3.3vh);
+    }
   }
 }
 
@@ -310,6 +453,8 @@ $intro-sweep: linear-gradient(100deg, $color-tertiary 0%, $color-secondary 50%, 
     h2 {
       font-size: clamp(2rem, 3.2vw, 3rem);
       margin: 0;
+      --gradient-duration: 20s;
+      --gradient-delay: -6s;
     }
   }
 
@@ -417,13 +562,15 @@ $intro-sweep: linear-gradient(100deg, $color-tertiary 0%, $color-secondary 50%, 
   &__header {
     width: 100%;
     margin: 0 0 1.5rem;
-    padding: 0 3rem;
+    padding: 0 3rem 0 var(--title-inset);
     box-sizing: border-box;
     text-align: left;
 
     h2 {
       font-size: clamp(2rem, 4vw, 3rem);
       margin: 0 0 0.4rem;
+      --gradient-duration: 26s;
+      --gradient-delay: -15s;
     }
 
     p {
@@ -654,11 +801,12 @@ $intro-sweep: linear-gradient(100deg, $color-tertiary 0%, $color-secondary 50%, 
   box-sizing: border-box;
 
   &__inner {
-    padding: 3.5rem 4rem 4rem;
+    padding: 3.5rem 4rem 4rem var(--title-inset);
 
     h2 {
       font-size: clamp(2rem, 4vw, 3rem);
       margin: 0 0 0.75rem;
+      color: $color-primary;
     }
   }
 
@@ -678,17 +826,21 @@ $intro-sweep: linear-gradient(100deg, $color-tertiary 0%, $color-secondary 50%, 
   }
 
   &__contact-link {
-    color: transparent;
-    background: $logo-gradient;
+    // Animados con .animated-gradient, pero con el degradado de la marca.
+    background-image: $logo-gradient;
     background-size: 200% 200%;
-    -webkit-background-clip: text;
-    background-clip: text;
-    animation: gradient-shift 10s ease-in-out infinite;
+    --gradient-duration: 9s;
+    --gradient-delay: -6s;
     font-size: clamp(1.3rem, 2.6vw, 1.9rem);
     font-weight: 700;
     text-decoration: none;
     border-bottom: 2px solid transparent;
     transition: border-color 0.2s ease, opacity 0.2s ease;
+
+    & + & {
+      --gradient-duration: 12s;
+      --gradient-delay: -2s;
+    }
 
     &:hover,
     &:focus-visible {
@@ -728,23 +880,54 @@ $intro-sweep: linear-gradient(100deg, $color-tertiary 0%, $color-secondary 50%, 
     }
   }
 
+  // Mismo degradado animado que los enlaces de contacto, en el texto y en el
+  // borde: el fondo tiene dos capas, el color de la sección por dentro
+  // (padding-box) y el degradado asomando por el borde transparente
+  // (border-box). Con hover la capa de dentro se vuelve transparente y el
+  // degradado rellena el botón. Como los enlaces, solo se anima con la
+  // sección en pantalla (ver observeAnimatedGradients en index.ts), con un
+  // ritmo propio para no ir sincronizado con ellos.
   &__cv {
+    --cv-animation: gradient-shift 11s ease-in-out -4s infinite;
     display: inline-flex;
     align-items: center;
-    gap: 0.6rem;
     margin-left: 0.5rem;
     padding: 0.9rem 1.5rem;
-    border: 1px solid $color-primary;
+    border: 1px solid transparent;
     border-radius: 999px;
-    color: $color-primary;
+    background-image: linear-gradient($bg-color, $bg-color), $logo-gradient;
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+    background-size: 100% 100%, 200% 200%;
+    animation: var(--cv-animation) paused;
+    will-change: transform;
     font-weight: 700;
     font-size: 0.95rem;
     text-decoration: none;
-    transition: background 0.2s ease, color 0.2s ease;
+
+    &.animated-gradient--visible,
+    &.animated-gradient--visible .section-7__cv-label {
+      animation-play-state: running;
+    }
 
     &:hover,
     &:focus-visible {
-      background: $color-primary;
+      background-image: linear-gradient(transparent, transparent), $logo-gradient;
+    }
+  }
+
+  &__cv-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    @include gradient-text($logo-gradient, 200% 200%);
+    animation: var(--cv-animation) paused;
+
+    // Con el botón relleno, el texto pasa a oscuro para que se lea.
+    .section-7__cv:hover &,
+    .section-7__cv:focus-visible & {
+      background: none;
+      -webkit-text-fill-color: $bg-color;
       color: $bg-color;
     }
   }
@@ -1057,5 +1240,19 @@ $intro-sweep: linear-gradient(100deg, $color-tertiary 0%, $color-secondary 50%, 
     &:focus-visible {
       color: $color-primary;
     }
+  }
+}
+
+// "Reducir movimiento": fuera los bucles decorativos (las secciones siguen
+// apareciendo con el scroll, que es navegación). Al final del archivo para que
+// gane a las reglas que declaran esas animaciones.
+@media (prefers-reduced-motion: reduce) {
+  .intro-aurora__blob,
+  .intro-avatar::before,
+  .intro-arrow__chevron,
+  #mask::before,
+  .section-7__cv,
+  .section-7__cv-label {
+    animation: none;
   }
 }
