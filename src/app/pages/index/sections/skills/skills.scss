@@ -102,28 +102,47 @@ $light-flow: 1;
 
     // Luz: una banda con todos los colores ($light-stops) fija a la pantalla,
     // de la que cada tarjeta muestra el trozo que tiene detrás, así que las
-    // tarjetas vecinas continúan el mismo degradado. --light-x es dónde cae el
-    // borde izquierdo de la pantalla respecto al de la tarjeta (lo miden
-    // placeSection5Light() en index.ts y --light, que anima el timeline), y
-    // además los colores avanzan $light-flow ciclos con el scroll. La máscara
-    // la reparte en tres manchas suaves (tipo aurora) que también se mueven
-    // con el scroll, colocadas distinto en cada tarjeta (--blob-x, abajo). Es
-    // el fondo de cada tarjeta, así que entre tarjetas nunca se ve nada.
-    &::before {
-      content: '';
+    // tarjetas vecinas continúan el mismo degradado, y además los colores
+    // avanzan $light-flow ciclos con el scroll. Una máscara la reparte en
+    // tres manchas suaves (tipo aurora), colocadas distinto en cada tarjeta
+    // (--blob-x, abajo). Es el fondo de cada tarjeta, así que entre tarjetas
+    // nunca se ve nada.
+    //
+    // Pensado para no repintar nada durante el scroll: la máscara y el
+    // degradado se pintan una vez y lo único que cambia es el transform de
+    // la banda (::before, con capa propia), que mueve la GPU. Si se pintara en
+    // cada fotograma, arrastraría al resto de la tarjeta (logos, sombras...).
+    .section-5__light {
       position: absolute;
       inset: 0;
       z-index: -1;
+      overflow: hidden;
       border-radius: inherit;
-      --light-x: calc(var(--light-x0, 0px) + var(--light, 0) * (var(--light-dx, 0px) + #{$light-flow} * #{$light-cycle}));
-      background: linear-gradient(90deg, $light-stops) var(--light-x) 0 / #{$light-cycle} 100% repeat-x;
       opacity: 0.15;
       $blobs:
-        radial-gradient(ellipse 70% 45% at calc(var(--blob-x, 25%) + var(--light, 0) * 40%) 22%, #000 0%, transparent 100%),
-        radial-gradient(ellipse 55% 60% at calc(85% - var(--blob-x, 25%) - var(--light, 0) * 30%) 55%, rgba(0, 0, 0, 0.8) 0%, transparent 100%),
-        radial-gradient(ellipse 80% 35% at calc(var(--blob-x, 25%) + 20% + var(--light, 0) * 20%) 88%, rgba(0, 0, 0, 0.55) 0%, transparent 100%);
+        radial-gradient(ellipse 70% 45% at var(--blob-x, 25%) 22%, #000 0%, transparent 100%),
+        radial-gradient(ellipse 55% 60% at calc(85% - var(--blob-x, 25%)) 55%, rgba(0, 0, 0, 0.8) 0%, transparent 100%),
+        radial-gradient(ellipse 80% 35% at calc(var(--blob-x, 25%) + 20%) 88%, rgba(0, 0, 0, 0.55) 0%, transparent 100%);
       -webkit-mask: $blobs;
       mask: $blobs;
+
+      // La banda mide un ciclo más que la tarjeta y se desplaza, módulo un
+      // ciclo, a donde cae el borde izquierdo de la pantalla respecto al de
+      // la tarjeta (--light-x0 y --light-dx los mide placeSection5Light() en
+      // index.ts; --light lo anima el timeline): como el degradado se repite
+      // cada ciclo, siempre cubre la tarjeta y nunca se ve un corte.
+      &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: calc(100% + #{$light-cycle});
+        background: linear-gradient(90deg, $light-stops) 0 0 / #{$light-cycle} 100% repeat-x;
+        will-change: transform;
+        --light-x: calc(var(--light-x0, 0px) + var(--light, 0) * (var(--light-dx, 0px) + #{$light-flow} * #{$light-cycle}));
+        transform: translateX(calc(mod(var(--light-x), #{$light-cycle}) - #{$light-cycle}));
+      }
     }
 
     display: flex;

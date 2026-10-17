@@ -95,7 +95,7 @@ galleryImages = [
 
 - Logos: `public/assets/img/skills/`, en SVG de [Simple Icons](https://simpleicons.org) (licencia CC0).
 - Cada logo se pone así: `style="--icon: url('assets/img/skills/nombre.svg')"`. Se tiñe solo con el azul de la marca, así que el color original del SVG no importa.
-- Si añades o quitas tarjetas, la luz de colores se adapta sola.
+- Si añades una tarjeta, copia una entera: cada una lleva al principio `<div class="section-5__light" aria-hidden="true"></div>`, que es su luz de colores. Por lo demás, la luz se adapta sola al número de tarjetas.
 
 ### Contacto
 
