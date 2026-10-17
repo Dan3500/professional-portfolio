@@ -24,9 +24,15 @@ export class IntroHero implements AfterViewInit, OnDestroy {
 
   // Escritura
   private readonly fullText = "Hello! I'm\nDaniel Soltero";
-  private readonly typingSpeed = 60;
+  private readonly typingSpeed = 45;
   private readonly highlightText = 'Daniel Soltero';
   private currentText = '';
+  // Lo ya pintado de la escritura (ver renderTypedText).
+  private typedCount = 0;
+  private typedBefore: Text | null = null;
+  private typedHighlight: HTMLElement | null = null;
+  private typedWord: HTMLElement | null = null;
+  private typedCursor: HTMLElement | null = null;
   // Sentido de la ola de color del nombre, al azar como el de los títulos.
   private readonly heroWaveReverse = Math.random() < 0.5;
   private typingTween: gsap.core.Tween | null = null;
@@ -231,7 +237,7 @@ export class IntroHero implements AfterViewInit, OnDestroy {
     this.typingTween = gsap.to(progress, {
       chars: this.fullText.length,
       duration,
-      delay: 0.7,
+      delay: 0.3,
       ease: 'none',
       snap: { chars: 1 },
       onUpdate: () => {
@@ -251,7 +257,9 @@ export class IntroHero implements AfterViewInit, OnDestroy {
       { opacity: 1, scale: 1, rotationY: 0, duration: 0.9, ease: 'back.out(1.6)' },
     );
 
-    gsap.fromTo(this.introRoleRef.nativeElement, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.7, delay: 0.3, ease: 'power2.out' });
+    // El rol entra casi sin pausa tras el nombre: en móvil es el elemento del
+    // LCP (ocupa más que las letras del nombre) y así queda por debajo de 2 s.
+    gsap.fromTo(this.introRoleRef.nativeElement, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.7, delay: 0.1, ease: 'power2.out' });
     gsap.to(this.introArrowRef.nativeElement, { opacity: 1, duration: 0.6, delay: 0.9 });
   }
 
@@ -275,22 +283,65 @@ export class IntroHero implements AfterViewInit, OnDestroy {
   // Pinta lo escrito hasta ahora con el cursor pegado a la última letra: en
   // "Hello! I'm" va detrás del texto (con su tamaño) y en el nombre, dentro de
   // su última palabra, con el tamaño grande y sin poder quedarse solo en otra
-  // línea.
+  // línea. Solo añade las letras nuevas (misma estructura que waveChars): si
+  // se rehiciera todo en cada pulsación, cada letra sería un elemento nuevo en
+  // cada fotograma y Chrome contaría la "D" (el elemento del LCP) como pintada
+  // al acabar de escribir y no cuando aparece.
   private renderTypedText() {
     const typedSpan = this.typedTextRef.nativeElement;
-    const cursor = '<span class="cursor">|</span>';
-    const highlightStart = this.fullText.indexOf(this.highlightText);
 
-    if (highlightStart !== -1 && this.currentText.length > highlightStart) {
-      const highlightEnd = highlightStart + this.highlightText.length;
-      const safeEnd = Math.min(this.currentText.length, highlightEnd);
-      const before = this.currentText.slice(0, highlightStart);
-      const highlight = this.currentText.slice(highlightStart, safeEnd);
-
-      const letters = waveChars(highlight, this.heroWaveReverse, this.highlightText.length, cursor);
-      typedSpan.innerHTML = `${escapeHtml(before)}<span class="highlight">${letters}</span>`;
-    } else {
-      typedSpan.innerHTML = escapeHtml(this.currentText) + cursor;
+    if (!this.typedCursor || this.currentText.length < this.typedCount) {
+      typedSpan.textContent = '';
+      this.typedBefore = typedSpan.appendChild(document.createTextNode(''));
+      this.typedCursor = typedSpan.appendChild(document.createElement('span'));
+      this.typedCursor.className = 'cursor';
+      this.typedCursor.textContent = '|';
+      this.typedHighlight = null;
+      this.typedWord = null;
+      this.typedCount = 0;
     }
+
+    const highlightStart = this.fullText.indexOf(this.highlightText);
+    const length = this.highlightText.length;
+    for (; this.typedCount < this.currentText.length; this.typedCount++) {
+      const char = this.currentText[this.typedCount];
+      const position = this.typedCount - highlightStart;
+
+      if (highlightStart === -1 || position < 0 || position >= length) {
+        this.typedBefore!.appendData(char);
+        continue;
+      }
+
+      if (!this.typedHighlight) {
+        this.typedHighlight = typedSpan.insertBefore(document.createElement('span'), this.typedCursor);
+        this.typedHighlight.className = 'highlight';
+      }
+      if (!this.typedWord || char === ' ') {
+        if (char === ' ') this.typedHighlight.append(' ');
+        this.typedWord = this.typedHighlight.appendChild(document.createElement('span'));
+        this.typedWord.className = 'wave-word';
+        this.typedWord.appendChild(this.typedCursor);
+        if (char === ' ') continue;
+      }
+
+      const letter = document.createElement('span');
+      letter.className = 'wave-char';
+      letter.setAttribute('aria-hidden', 'true');
+      letter.style.setProperty('--i', String(this.heroWaveReverse ? length - 1 - position : position));
+      letter.textContent = char;
+      this.typedWord.insertBefore(letter, this.typedCursor);
+      this.syncWave(letter);
+    }
+  }
+
+  // La ola del nombre avanza con el scroll (pushWaves en Index mueve el tiempo
+  // de sus animaciones): una letra nueva arranca con el mismo tiempo que las
+  // que ya estaban para que la ola no se rompa si se ha hecho scroll antes.
+  private syncWave(letter: HTMLElement) {
+    const first = this.typedHighlight?.querySelector('.wave-char');
+    if (!first || first === letter) return;
+    const reference = first.getAnimations()[0];
+    const animation = letter.getAnimations()[0];
+    if (reference && animation) animation.currentTime = reference.currentTime;
   }
 }

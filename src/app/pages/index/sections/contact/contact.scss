@@ -1,5 +1,14 @@
 @use '../../../../../tokens' as *;
 
+// Los colores de la ola (los de wave-color en styles.scss) en un degradado
+// que empieza y acaba en azul, para repetirlo sin costura. Con un fondo del
+// doble de ancho, desplazarlo un 200% es un ciclo completo sin salto.
+$wave-flow-gradient: linear-gradient(90deg, $color-primary, $color-tertiary, $color-primary, $color-deep-blue, $color-primary);
+
+@keyframes wave-flow {
+  to { background-position: 200% 0; }
+}
+
 .section-7 {
   position: relative;
   width: 100%;
@@ -33,26 +42,41 @@
     margin-bottom: 2.5rem;
   }
 
+  // Ola de color en bucle (.wave-loop en styles.scss), cada uno con su ritmo
+  // para no ir sincronizados. Con hover, una línea debajo con los mismos
+  // colores avanzando (wave-flow), que crece de izquierda a derecha. Solo se
+  // anima mientras se ve: sin hover está a escala 0 y sin animación.
   &__contact-link {
-    // Animados con .animated-gradient, pero con el degradado de la marca.
-    background-image: $logo-gradient;
-    background-size: 200% 200%;
-    --gradient-duration: 9s;
+    --gradient-duration: 11s;
     --gradient-delay: -6s;
+    position: relative;
     font-size: clamp(1.3rem, 2.6vw, 1.9rem);
     font-weight: 700;
     text-decoration: none;
-    border-bottom: 2px solid transparent;
-    transition: border-color 0.2s ease, opacity 0.2s ease;
 
     & + & {
-      --gradient-duration: 12s;
+      --gradient-duration: 13s;
       --gradient-delay: -2s;
     }
 
-    &:hover,
-    &:focus-visible {
-      border-color: $color-secondary;
+    &::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -0.15em;
+      height: 2px;
+      border-radius: 1px;
+      background: $wave-flow-gradient 0 0 / 200% 100%;
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.35s ease;
+    }
+
+    &:hover::after,
+    &:focus-visible::after {
+      transform: scaleX(1);
+      animation: wave-flow 12s linear infinite;
     }
   }
 
@@ -88,39 +112,41 @@
     }
   }
 
-  // Mismo degradado animado que los enlaces de contacto, en el texto y en el
-  // borde: el fondo tiene dos capas, el color de la sección por dentro
-  // (padding-box) y el degradado asomando por el borde transparente
-  // (border-box). Con hover la capa de dentro se vuelve transparente y el
-  // degradado rellena el botón. Como los enlaces, solo se anima con la
-  // sección en pantalla (ver observeAnimatedGradients en index.ts), con un
-  // ritmo propio para no ir sincronizado con ellos.
+  // El texto lleva la misma ola en bucle que los enlaces (.wave-loop). El
+  // botón recorre los mismos colores (wave-color, en styles.scss) en su
+  // `color`, que usan el borde y la flecha; con hover ese color rellena el
+  // botón y el texto pasa a oscuro. Como la ola, solo se anima con el botón
+  // en pantalla (ver observeAnimatedGradients en index.ts).
   &__cv {
-    --cv-animation: gradient-shift 11s ease-in-out -4s infinite;
+    --gradient-duration: 12s;
+    --gradient-delay: -4s;
     display: inline-flex;
     align-items: center;
     margin-left: 0.5rem;
     padding: 0.9rem 1.5rem;
-    border: 1px solid transparent;
+    border: 1px solid currentColor;
     border-radius: 999px;
-    background-image: linear-gradient($bg-color, $bg-color), $logo-gradient;
-    background-origin: border-box;
-    background-clip: padding-box, border-box;
-    background-size: 100% 100%, 200% 200%;
-    animation: var(--cv-animation) paused;
+    background-color: transparent;
+    color: $color-primary;
+    animation: wave-color var(--gradient-duration) ease-in-out var(--gradient-delay) infinite paused;
+    // Capa propia: su color cambia en cada fotograma y, sin ella, repintaría
+    // la sección entera.
     will-change: transform;
     font-weight: 700;
     font-size: 0.95rem;
     text-decoration: none;
 
-    &.animated-gradient--visible,
-    &.animated-gradient--visible .section-7__cv-label {
+    &.animated-gradient--visible {
       animation-play-state: running;
     }
 
+    // Relleno con los colores de la ola desplazándose (wave-flow).
     &:hover,
     &:focus-visible {
-      background-image: linear-gradient(transparent, transparent), $logo-gradient;
+      border-color: transparent;
+      color: $bg-color;
+      background: $wave-flow-gradient 0 0 / 200% 100%;
+      animation: wave-flow 12s linear infinite;
     }
   }
 
@@ -128,16 +154,6 @@
     display: inline-flex;
     align-items: center;
     gap: 0.6rem;
-    @include gradient-text($logo-gradient, 200% 200%);
-    animation: var(--cv-animation) paused;
-
-    // Con el botón relleno, el texto pasa a oscuro para que se lea.
-    .section-7__cv:hover &,
-    .section-7__cv:focus-visible & {
-      background: none;
-      -webkit-text-fill-color: $bg-color;
-      color: $bg-color;
-    }
   }
 
   &__cv-icon {
@@ -173,10 +189,11 @@
   }
 }
 
-// "Reducir movimiento": sin el degradado animado del botón del CV.
+// "Reducir movimiento": el botón y los enlaces, quietos en el azul.
 @media (prefers-reduced-motion: reduce) {
   .section-7__cv,
-  .section-7__cv-label {
+  .section-7__cv:hover,
+  .section-7__contact-link::after {
     animation: none;
   }
 }

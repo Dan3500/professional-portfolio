@@ -36,7 +36,6 @@ $color-deep-blue: #5865f2;
 // Menta → azul principal → azul índigo oscuro, con el azul ocupando el tramo
 // central y más largo (es el color que más se ve) y transiciones cortas para
 // que el cambio de color se note al moverse.
-$intro-sweep: linear-gradient(115deg, #34d399 0%, #34d399 6%, $color-primary 30%, $color-primary 70%, $color-deep-blue 94%, $color-deep-blue 100%);
 
 // Texto recortado con un degradado más ancho que él, para poder desplazarlo.
 @mixin gradient-text($gradient, $size: 250% 100%) {

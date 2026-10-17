@@ -82,12 +82,17 @@ export class Index implements AfterViewInit, OnDestroy {
   private menuTween: gsap.core.Timeline | gsap.core.Tween | null = null;
   private menuKeydownHandler: ((event: KeyboardEvent) => void) | null = null;
 
-  constructor(private readonly cdr: ChangeDetectorRef) {}
+  constructor(
+    private readonly cdr: ChangeDetectorRef,
+    private readonly host: ElementRef<HTMLElement>,
+  ) {}
 
   ngAfterViewInit() {
     this.initLenis();
     this.timeLine();
     this.splitWaveTitles();
+    this.alignTitles();
+    document.fonts?.ready.then(() => this.alignTitles());
     this.observeAnimatedGradients();
 
     // <app-project-showcase> mide su layout en su propio ngAfterViewInit,
@@ -161,28 +166,29 @@ export class Index implements AfterViewInit, OnDestroy {
     gsap.ticker.lagSmoothing(0);
   }
 
-  // Separa cada título .wave-title en letras para el degradado en ola (ver
-  // .wave-title en styles.scss), con el sentido de la ola elegido al azar para
-  // cada uno. El texto completo queda en aria-label para que los lectores de
-  // pantalla no lo lean letra a letra.
+  // Separa cada título .wave-title (y cada texto .wave-loop) en letras para
+  // la ola de color (ver styles.scss), con el sentido de la ola elegido al
+  // azar para cada uno. El texto completo queda en aria-label (del enlace, si
+  // está dentro de uno) para que los lectores de pantalla no lo lean letra a
+  // letra.
   private splitWaveTitles() {
-    document.querySelectorAll<HTMLElement>('.wave-title').forEach((title) => {
-      const text = title.textContent ?? '';
-      title.setAttribute('aria-label', text);
+    document.querySelectorAll<HTMLElement>('.wave-title, .wave-loop').forEach((title) => {
+      const text = title.textContent?.trim() ?? '';
+      (title.closest('a') ?? title).setAttribute('aria-label', text);
       title.innerHTML = waveChars(text, Math.random() < 0.5);
     });
   }
 
-  // Los textos con degradado en bucle (.animated-gradient y el botón del CV)
-  // repintan en cada fotograma: solo se animan mientras están en pantalla. A
-  // los .wave-title solo se les marca para que pushWaves sepa cuáles mover.
+  // Las olas en bucle (.wave-loop y el botón del CV) repintan en cada
+  // fotograma: solo se animan mientras están en pantalla. A los .wave-title
+  // solo se les marca para que pushWaves sepa cuáles mover.
   private observeAnimatedGradients() {
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
         entry.target.classList.toggle('animated-gradient--visible', entry.isIntersecting);
       }
     });
-    document.querySelectorAll('.animated-gradient, .wave-title, .section-7__cv').forEach((element) => observer.observe(element));
+    document.querySelectorAll('.wave-loop, .wave-title, .section-7__cv').forEach((element) => observer.observe(element));
     this.gradientObserver = observer;
   }
 
@@ -469,6 +475,16 @@ export class Index implements AfterViewInit, OnDestroy {
     window.scrollTo({ top: targetY, behavior: 'smooth' });
   }
 
+  // Alinea los títulos de "Habilidades" y "Let's talk" con el de "¿Por qué
+  // yo?" midiendo dónde empieza este (va centrado junto a su lista, así que
+  // su posición depende del ancho de la ventana y de la longitud del título).
+  // En móvil esas secciones usan su propio margen y la variable no se usa.
+  private alignTitles() {
+    const reference = document.querySelector('#section-4 h2');
+    if (!reference) return;
+    this.host.nativeElement.style.setProperty('--title-inset', `${reference.getBoundingClientRect().left}px`);
+  }
+
   private rebuildTimeline() {
     this.scrollTimeline?.scrollTrigger?.kill();
     this.scrollTimeline?.kill();
@@ -481,6 +497,7 @@ export class Index implements AfterViewInit, OnDestroy {
     );
 
     this.timeLine();
+    this.alignTitles();
     ScrollTrigger.refresh();
   }
 
@@ -503,7 +520,8 @@ export class Index implements AfterViewInit, OnDestroy {
     // Hay que medir el carrusel en reposo, antes de aplicar el xPercent:25
     // inicial (si no, la medida saldría desplazada por ese mismo transform).
     const { endXPercent: section5TrackEndXPercent, duration: section5TrackDuration } = this.measureSection5Track();
-    gsap.set('.section-5__track', { xPercent: 25 });
+    this.placeSection5Light(section5TrackEndXPercent);
+    gsap.set('.section-5__track', { xPercent: 25, '--light': 0 });
 
     const tl = gsap.timeline({
       scrollTrigger: {
@@ -568,7 +586,8 @@ export class Index implements AfterViewInit, OnDestroy {
       // el panel; arranca justo a tiempo para que la tarjeta 01 llegue a su
       // sitio (xPercent 0) cuando el panel termina de entrar (s5Opaque, donde
       // aterriza el menú), y desde ahí sigue avanzando con el scroll.
-      .to('.section-5__track', { xPercent: section5TrackEndXPercent, ease: 'none', duration: section5TrackDuration },
+      // --light: avance de 0 a 1 de la luz que recorre las tarjetas (ver placeSection5Light).
+      .to('.section-5__track', { xPercent: section5TrackEndXPercent, '--light': 1, ease: 'none', duration: section5TrackDuration },
         `s5Opaque-=${(section5TrackDuration * 25) / (25 - section5TrackEndXPercent)}`)
 
       .to('.avatar-button', { opacity: 1, pointerEvents: 'auto', ease: 'power1.out', duration: 0.4 }, 'section2Start')
@@ -591,6 +610,24 @@ export class Index implements AfterViewInit, OnDestroy {
   // la última tarjeta llegue justo al borde del viewport, sin hueco vacío)
   // y cuánto debe durar el recorrido (más lento cuantas menos tarjetas
   // quepan a la vez en pantalla, para que no pasen demasiado rápido en móvil).
+  // La luz de las tarjetas (skills.scss) es una banda de colores fija a la
+  // pantalla: cada tarjeta pinta en su fondo el trozo que tiene detrás. Para
+  // eso necesita saber dónde cae el borde izquierdo de la pantalla respecto
+  // al suyo, que es x0 + --light * dx (en px): x0 con el carrusel al inicio
+  // (xPercent 25) y dx lo que se desplaza hasta endXPercent. Se mide en
+  // reposo, antes de aplicar ningún xPercent.
+  private placeSection5Light(endXPercent: number) {
+    const track = document.querySelector<HTMLElement>('.section-5__track');
+    if (!track) return;
+
+    const trackWidth = track.getBoundingClientRect().width;
+    const startShift = 0.25 * trackWidth;
+    track.style.setProperty('--light-dx', `${((25 - endXPercent) / 100) * trackWidth}px`);
+    track.querySelectorAll<HTMLElement>('.section-5__card').forEach((card) => {
+      card.style.setProperty('--light-x0', `${-card.getBoundingClientRect().left - startShift}px`);
+    });
+  }
+
   private measureSection5Track(): { endXPercent: number; duration: number } {
     const track = document.querySelector('.section-5__track');
     const viewport = document.querySelector('.section-5__viewport');
