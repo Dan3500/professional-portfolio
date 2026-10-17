@@ -521,7 +521,8 @@ export class Index implements AfterViewInit, OnDestroy {
     // inicial (si no, la medida saldría desplazada por ese mismo transform).
     const { endXPercent: section5TrackEndXPercent, duration: section5TrackDuration } = this.measureSection5Track();
     this.placeSection5Light(section5TrackEndXPercent);
-    gsap.set('.section-5__track', { xPercent: 25, '--light': 0 });
+    gsap.set('.section-5__track', { xPercent: 25 });
+    gsap.set('.section-5__light', { '--light': 0 });
 
     const tl = gsap.timeline({
       scrollTrigger: {
@@ -586,9 +587,11 @@ export class Index implements AfterViewInit, OnDestroy {
       // el panel; arranca justo a tiempo para que la tarjeta 01 llegue a su
       // sitio (xPercent 0) cuando el panel termina de entrar (s5Opaque, donde
       // aterriza el menú), y desde ahí sigue avanzando con el scroll.
-      // --light: avance de 0 a 1 de la luz que recorre las tarjetas (ver placeSection5Light).
-      .to('.section-5__track', { xPercent: section5TrackEndXPercent, '--light': 1, ease: 'none', duration: section5TrackDuration },
+      .to('.section-5__track', { xPercent: section5TrackEndXPercent, ease: 'none', duration: section5TrackDuration },
         `s5Opaque-=${(section5TrackDuration * 25) / (25 - section5TrackEndXPercent)}`)
+      // --light: avance de 0 a 1 de la luz de las tarjetas, a la vez que el
+      // carrusel (ver placeSection5Light).
+      .to('.section-5__light', { '--light': 1, ease: 'none', duration: section5TrackDuration }, '<')
 
       .to('.avatar-button', { opacity: 1, pointerEvents: 'auto', ease: 'power1.out', duration: 0.4 }, 'section2Start')
       .to('.menu-toggle', { opacity: 1, pointerEvents: 'auto', ease: 'power1.out', duration: 0.4 }, '<');

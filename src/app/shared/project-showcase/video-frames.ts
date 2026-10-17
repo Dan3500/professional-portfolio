@@ -15,6 +15,33 @@ const MAX_WIDTH = 1280;
 const JPEG_QUALITY = 0.82;
 const DECODED_CACHE_SIZE = 12;
 
+// Pausa la extracción mientras el usuario hace scroll por el resto de la
+// página (lo controla ProjectShowcase): reproducir el vídeo oculto, copiar
+// sus fotogramas de la GPU y comprimirlos compite con las animaciones del
+// scroll y provocaba tirones. Como se extrae reproduciendo, pausar el vídeo
+// no pierde nada: sigue donde lo dejó al reanudarse.
+export const extractionGate = {
+  paused: false,
+  listeners: new Set<() => void>(),
+  set(paused: boolean) {
+    if (this.paused === paused) return;
+    this.paused = paused;
+    this.listeners.forEach((listener) => listener());
+  },
+  // Para la extracción por seeks: espera a que se reanude.
+  whenOpen(): Promise<void> {
+    if (!this.paused) return Promise.resolve();
+    return new Promise((resolve) => {
+      const listener = () => {
+        if (this.paused) return;
+        this.listeners.delete(listener);
+        resolve();
+      };
+      this.listeners.add(listener);
+    });
+  },
+};
+
 export class VideoFrames {
   private frames: (Blob | undefined)[] = [];
   private cache = new Map<number, ImageBitmap>();
@@ -45,7 +72,10 @@ export class VideoFrames {
       return { bitmap: hit, exact: true };
     }
 
-    this.decode(index);
+    // Mientras se extrae, puede que el fotograma aún no exista (se extraen en
+    // orden): se decodifica el ya extraído más cercano para no dejar el
+    // canvas vacío al llegar pronto a un capítulo.
+    this.decode(this.frames[index] ? index : this.nearestExtracted(index));
 
     let nearest: ImageBitmap | undefined;
     let bestDistance = Infinity;
@@ -57,6 +87,14 @@ export class VideoFrames {
       }
     }
     return nearest ? { bitmap: nearest, exact: false } : undefined;
+  }
+
+  private nearestExtracted(index: number): number {
+    for (let distance = 1; distance < this.frames.length; distance++) {
+      if (this.frames[index - distance]) return index - distance;
+      if (this.frames[index + distance]) return index + distance;
+    }
+    return index;
   }
 
   // Precarga vecinos para que al seguir haciendo scroll el siguiente ya esté.
@@ -198,17 +236,25 @@ export class VideoFrames {
       };
 
       // Con la pestaña en segundo plano el navegador pausa el vídeo; se
-      // retoma al volver (los huecos que queden los rellena fillGaps()).
-      const onVisibility = () => {
-        if (!document.hidden && !video.ended && video.paused) video.play().catch(() => {});
+      // retoma al volver (los huecos que queden los rellena fillGaps()). Lo
+      // mismo con extractionGate: en pausa mientras se hace scroll.
+      const sync = () => {
+        if (video.ended) return;
+        if (document.hidden || extractionGate.paused) video.pause();
+        else if (video.paused) video.play().catch(() => {});
       };
-      document.addEventListener('visibilitychange', onVisibility);
+      const cleanup = () => {
+        document.removeEventListener('visibilitychange', sync);
+        extractionGate.listeners.delete(sync);
+      };
+      document.addEventListener('visibilitychange', sync);
+      extractionGate.listeners.add(sync);
 
       video.addEventListener(
         'ended',
         () => {
           cancelAnimationFrame(rafId);
-          document.removeEventListener('visibilitychange', onVisibility);
+          cleanup();
           resolve();
         },
         { once: true },
@@ -219,9 +265,10 @@ export class VideoFrames {
         .then(() => {
           if (hasFrameCallback) video.requestVideoFrameCallback(onFrame);
           else poll();
+          sync();
         })
         .catch((error) => {
-          document.removeEventListener('visibilitychange', onVisibility);
+          cleanup();
           reject(error);
         });
     });
@@ -229,6 +276,7 @@ export class VideoFrames {
 
   private async captureBySeeking(video: HTMLVideoElement, total: number, capture: (time: number) => void) {
     for (let i = 0; i < total && !this.disposed; i++) {
+      await extractionGate.whenOpen();
       const time = ((i + 0.5) / total) * video.duration;
       video.currentTime = time;
       await once(video, 'seeked');

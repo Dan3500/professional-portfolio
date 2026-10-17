@@ -12,7 +12,7 @@ import {
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ProjectMedia, ProjectStoryData } from '../../pages/index/project-stories.data';
-import { ScrubCanvas, VideoFrames } from './video-frames';
+import { ScrubCanvas, VideoFrames, extractionGate } from './video-frames';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -62,10 +62,23 @@ const TIMING = {
   dimEnd: 'top 50%', // trigger: galería
 } as const;
 
-// La extracción de fotogramas (que descarga y reproduce cada vídeo entero) no
-// arranca al cargar, sino cuando el bloque de proyectos está a unas 4
-// pantallas: quien no llegue hasta aquí no se descarga los vídeos.
-const EXTRACTION_START = 'top 400%';
+// La extracción de fotogramas (que descarga y reproduce cada vídeo entero)
+// arranca con la portada ya escrita (ms tras cargar, en un momento libre del
+// navegador): mientras se hace scroll lejos de los proyectos está en pausa
+// (ver extractionGate), así que aprovecha los ratos sin scroll, y la portada
+// es el más seguro. Con "ahorro de datos" activado espera al primer scroll
+// (px), para no descargar los vídeos a quien no pase de la portada.
+const EXTRACTION_DELAY_MS = 3500;
+const EXTRACTION_SAVE_DATA_START_PX = 50;
+
+// A esta distancia de los proyectos (márgenes del IntersectionObserver) la
+// extracción ya no se pausa con el scroll: hacen falta los fotogramas. En 0:
+// con más margen, los proyectos ya cuentan como "cerca" durante el carrusel
+// de habilidades (justo encima), que es donde más se notaba la extracción.
+const EXTRACTION_NEAR_MARGIN = '0px';
+
+// Tiempo sin scroll tras el que se reanuda la extracción de vídeos.
+const SCROLL_IDLE_MS = 250;
 
 @Component({
   selector: 'app-project-showcase',
@@ -111,6 +124,20 @@ export class ProjectShowcase implements AfterViewInit, OnDestroy {
   private players: { player: ScrubCanvas; active: boolean }[] = [];
   private shotVideoObserver: IntersectionObserver | null = null;
   private resizeHandler = () => this.players.forEach(({ player }) => player.resize());
+  // La extracción de vídeos se pausa mientras se hace scroll por el resto de
+  // la página y se reanuda al parar (ver extractionGate). Con los proyectos
+  // cerca (EXTRACTION_NEAR_MARGIN) nunca se pausa: ahí hacen falta los
+  // fotogramas cuanto antes.
+  private rootVisible = false;
+  private extractionTimer = 0;
+  private rootObserver: IntersectionObserver | null = null;
+  private scrollIdleTimer = 0;
+  private scrollHandler = () => {
+    if (this.rootVisible) return;
+    extractionGate.set(true);
+    clearTimeout(this.scrollIdleTimer);
+    this.scrollIdleTimer = window.setTimeout(() => extractionGate.set(false), SCROLL_IDLE_MS);
+  };
   private tick = () => this.players.forEach(({ player, active }) => active && player.tick());
 
   ngAfterViewInit() {
@@ -119,6 +146,12 @@ export class ProjectShowcase implements AfterViewInit, OnDestroy {
 
     gsap.ticker.add(this.tick);
     window.addEventListener('resize', this.resizeHandler);
+    window.addEventListener('scroll', this.scrollHandler, { passive: true });
+    this.rootObserver = new IntersectionObserver(([entry]) => {
+      this.rootVisible = entry.isIntersecting;
+      if (this.rootVisible) extractionGate.set(false);
+    }, { rootMargin: EXTRACTION_NEAR_MARGIN });
+    this.rootObserver.observe(this.rootRef.nativeElement);
     this.observeShotVideos();
     document.fonts?.ready.then(() => ScrollTrigger.refresh());
   }
@@ -133,6 +166,11 @@ export class ProjectShowcase implements AfterViewInit, OnDestroy {
 
   ngOnDestroy() {
     this.shotVideoObserver?.disconnect();
+    this.rootObserver?.disconnect();
+    window.removeEventListener('scroll', this.scrollHandler);
+    clearTimeout(this.scrollIdleTimer);
+    clearTimeout(this.extractionTimer);
+    extractionGate.set(false);
     gsap.ticker.remove(this.tick);
     window.removeEventListener('resize', this.resizeHandler);
     this.ctx?.revert();
@@ -192,7 +230,15 @@ export class ProjectShowcase implements AfterViewInit, OnDestroy {
     const onFirstRefresh = () => {
       ScrollTrigger.removeEventListener('refresh', onFirstRefresh);
       this.extractionReady = true;
-      ScrollTrigger.create(st({ trigger: root, start: EXTRACTION_START, once: true, onEnter: () => this.extractAll() }));
+      const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
+      if (saveData) {
+        ScrollTrigger.create(st({ start: EXTRACTION_SAVE_DATA_START_PX, once: true, onEnter: () => this.extractAll() }));
+      } else {
+        this.extractionTimer = window.setTimeout(() => {
+          if ('requestIdleCallback' in window) requestIdleCallback(() => this.extractAll(), { timeout: 2000 });
+          else this.extractAll();
+        }, EXTRACTION_DELAY_MS);
+      }
     };
     ScrollTrigger.addEventListener('refresh', onFirstRefresh);
 
