@@ -1,4 +1,4 @@
-@use '../../../styles.scss' as *;
+@use '../../../tokens' as *;
 
 // Cada .chapter es un contenedor alto con el fondo (vídeo/imagen) en un
 // stage sticky de 100vh y el contenido en flujo normal pasando por encima.
@@ -8,6 +8,7 @@
   --bg-1: #151525;
   --bg: linear-gradient(90deg, var(--bg-0) 0%, var(--bg-1) 100%);
   --cream: #{$color-quaternary};
+  --frame: #{$color-primary}; // marco y botón de ampliar de las fotos al pasar el ratón
   --pink: #{$color-secondary};
   --text: #f8f8f8;
   --footer-line: linear-gradient(90deg, #{$color-primary-bold}, #{$color-primary} 40%, #{$color-secondary} 70%, #{$color-tertiary});
@@ -234,12 +235,12 @@
     will-change: transform;
   }
 
-  // Borde crema por dentro para no mover el layout.
+  // Marco por dentro para no mover el layout.
   &::after {
     content: '';
     position: absolute;
     inset: 0;
-    box-shadow: inset 0 0 0 0 var(--cream);
+    box-shadow: inset 0 0 0 0 var(--frame);
     transition: box-shadow 0.2s var(--ease-out);
     pointer-events: none;
   }
@@ -261,13 +262,13 @@
 
   &:hover::after,
   &:focus-visible::after {
-    box-shadow: inset 0 0 0 4px var(--cream);
+    box-shadow: inset 0 0 0 4px var(--frame);
   }
 
   &:hover &__icon,
   &:focus-visible &__icon {
-    background: var(--cream);
-    color: var(--bg-0);
+    background: var(--frame);
+    color: #fff;
   }
 
   &:focus-visible {

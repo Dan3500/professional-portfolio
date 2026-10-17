@@ -1,3 +1,5 @@
+@use 'tokens' as *;
+
 @font-face {
   font-family: 'Montserrat';
   src: url('/assets/fonts/Montserrat/static/Montserrat-Regular.ttf') format('truetype');
@@ -27,19 +29,6 @@
   font-display: swap;
 }
 
-$color-primary: #1d95ff;     // azul principal
-$color-primary-light: #93c5fd; // azul claro
-$color-primary-bold: #1e40af;  // azul índigo oscuro
-$color-secondary: #22d3ee;   // cyan-teal (verde ajustado al azul)
-$color-tertiary: #34d399;    // esmeralda fresca
-$color-quaternary: #e0f2fe;  // azul muy claro (fallback/texto)
-$bg-color: #111318;
-
-$font-montserrat: 'Montserrat', sans-serif;
-$font-montserrat-regular: 'Montserrat', sans-serif;
-$font-montserrat-bold: 'Montserrat', sans-serif;
-$font-montserrat-bold-italic: 'Montserrat-BoldItalic', 'Montserrat', sans-serif;
-
 html, body {
      margin: 0 !important;
     padding: 0 !important; 
@@ -53,15 +42,146 @@ html, body {
   height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: $color-primary;
+  background: linear-gradient(to bottom, $brand-stops);
   border-radius: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 
-/* Firefox */
+/* Firefox: solo admite un color plano, se usa el azul central de la paleta */
 * {
   scrollbar-width: thin;
   scrollbar-color: $color-primary transparent;
+}
+
+// ---------------------------------------------------------------------------
+// Textos con ola de color. Van aquí (globales)
+// y no en index.scss porque parte de su contenido (las letras de la ola, el
+// nombre que se va escribiendo) se crea por código y no llevaría el atributo
+// con el que Angular aísla los estilos de un componente.
+// ---------------------------------------------------------------------------
+
+// Títulos con el color en forma de ola: index.ts separa cada letra en un
+// .wave-char con su posición en --i, y cada una recorre los mismos colores
+// con $wave-step de retraso respecto a la anterior, así el color avanza letra
+// a letra. Cada letra es de un solo color en cada momento: se anima `color`
+// (texto normal) y no un degradado recortado con background-clip, que cuesta
+// casi el doble de pintar.
+$wave-step: 0.45s;
+
+// Azul → menta → azul → índigo → azul, con aceleración y frenada suaves en
+// cada tramo y pausas en el azul (dos por ciclo): el azul domina y los otros
+// dos colores se tocan de pasada.
+@keyframes wave-color {
+  0%, 10%, 40%, 60%, 90%, 100% { color: $color-primary; }
+  25% { color: #34d399; }
+  75% { color: $color-deep-blue; }
+}
+
+// La animación está siempre en pausa: solo avanza (o retrocede) con el
+// scroll, que mueve su tiempo desde index.ts (pushWaves). El delay fija dónde
+// arranca cada letra, que es lo que da la forma de ola.
+@mixin wave-char($duration, $delay: 0s, $step: $wave-step) {
+  display: inline-block;
+  color: $color-primary;
+  animation: wave-color $duration ease-in-out infinite paused;
+  animation-delay: calc(#{$delay} - var(--i) * #{$step});
+}
+
+// Las letras de una palabra van juntas en un bloque que no se parte.
+.wave-word {
+  display: inline-block;
+}
+
+// El IntersectionObserver de index.ts les pone .animated-gradient--visible
+// para que pushWaves solo mueva las que están en pantalla. --gradient-duration
+// y --gradient-delay, en cada título, los heredan sus letras.
+.wave-title {
+  will-change: transform;
+
+  .wave-char {
+    @include wave-char(var(--gradient-duration, 11s), var(--gradient-delay, 0s));
+  }
+}
+
+// Ola en bucle, sin depender del scroll (enlaces y botón de "Let's talk"):
+// las mismas letras que los títulos, pero su animación corre sola mientras
+// están en pantalla (la clase la pone el IntersectionObserver de index.ts).
+// Con menos retraso entre letras que los títulos: son textos largos (el
+// email) y con el paso normal cabría un ciclo entero de colores a la vez; así
+// el color avanza como una sola franja suave. Con capa propia, como los
+// títulos, para que cada fotograma solo repinte el texto y no la sección.
+.wave-loop {
+  will-change: transform;
+
+  .wave-char {
+    @include wave-char(var(--gradient-duration, 11s), var(--gradient-delay, 0s), 0.12s);
+  }
+
+  &.animated-gradient--visible .wave-char {
+    animation-play-state: running;
+  }
+
+  // Con el botón del CV relleno (hover), el texto pasa a oscuro.
+  .section-7__cv:hover &,
+  .section-7__cv:focus-visible & {
+    .wave-char {
+      animation: none;
+      color: $bg-color;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .wave-char {
+      animation: none;
+    }
+  }
+}
+
+// Nombre de la portada ("Daniel Soltero"): la copia invisible que reserva el
+// hueco y la que se va escribiendo, con la misma ola que los títulos.
+.intro-title .highlight {
+  font-size: clamp(2.4rem, 8.5vw, 6.5rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+// Las letras sueltas de la copia invisible (ver renderTypedGhost en index.ts)
+// tienen que medir lo mismo que las visibles para que el nombre se parta en
+// las mismas líneas.
+.intro-title .wave-char {
+  display: inline-block;
+}
+
+.intro-title__live .wave-char {
+  @include wave-char(22s);
+}
+
+// Cursor de la escritura. Lo crea renderTypedText dentro del texto, junto a la
+// última letra (en el nombre, dentro de su última palabra, que no se parte),
+// así que hereda su tamaño y nunca se queda suelto en otra línea.
+// inline-block: un inline no puede tener capa propia y el parpadeo (opacity)
+// obligaría a repintar el texto; así lo anima la GPU.
+.intro-title .cursor {
+  display: inline-block;
+  margin-left: 0.04em;
+  color: $color-secondary;
+  font-weight: 400;
+  animation: blink 0.8s infinite;
+
+  // El de la copia invisible solo reserva su hueco.
+  &--ghost {
+    animation: none;
+  }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+// Con la portada ya invisible (ver setIntroPaused en index.ts) deja de parpadear.
+.intro-section--paused .intro-title .cursor {
+  animation-play-state: paused;
 }

@@ -1,0 +1,30 @@
+<div #mask class="mask" id="mask">
+    <section #introduction id="introduction" class="intro-section">
+            <!-- Manchas de color de la paleta (verde, cian y azul): dan a la portada un fondo vivo que
+                 contrasta con el marino de fuera cuando se encoge en el logo -->
+            <div class="intro-aurora" aria-hidden="true">
+                <span class="intro-aurora__blob intro-aurora__blob--green"></span>
+                <span class="intro-aurora__blob intro-aurora__blob--cyan"></span>
+                <span class="intro-aurora__blob intro-aurora__blob--blue"></span>
+            </div>
+            <canvas #particlesCanvas id="particles-canvas"></canvas>
+            <div class="intro-content">
+                    <h1 class="intro-title" aria-label="Hello! I'm Daniel Soltero">
+                        <!-- Copia invisible del texto completo: reserva su hueco para
+                             que nada se mueva mientras se escribe -->
+                        <span #typedGhost class="intro-title__ghost" aria-hidden="true"></span>
+                        <span class="intro-title__live" aria-hidden="true">
+                            <!-- El cursor lo añade renderTypedText junto a la última letra escrita -->
+                            <span #typedText class="typed-text"></span>
+                        </span>
+                    </h1>
+                    <p #introRole class="intro-role">Full Stack Developer · Tech Lead</p>
+                    <div #introAvatar class="intro-avatar">
+                        <img src="assets/img/avatar.jpg" alt="Daniel Soltero" />
+                    </div>
+            </div>
+            <span #introArrow class="intro-arrow" aria-hidden="true">
+                <span class="intro-arrow__chevron"></span>
+            </span>
+    </section>
+</div>

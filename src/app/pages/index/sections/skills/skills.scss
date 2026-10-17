@@ -1,0 +1,192 @@
+@use '../../../../../tokens' as *;
+
+// Luz de las tarjetas: la paleta de marca más el morado de los textos de
+// "Quién soy", en un ciclo que vuelve al verde para poder repetirse; cuánto
+// mide un ciclo en pantalla y cuántos ciclos pasan durante el carrusel.
+$light-purple: #b83fd9;
+$light-stops: $color-tertiary 0%, $color-secondary 20%, $color-primary 40%, $color-indigo 60%, $light-purple 80%, $color-tertiary 100%;
+$light-cycle: 150vw;
+$light-flow: 1;
+
+.section-5 {
+  position: fixed;
+  top: 50%;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: clamp(1.5rem, 3vw, 3rem) 0;
+  color: white;
+  font-family: $font-montserrat;
+  opacity: 0;
+  pointer-events: none;
+  box-sizing: border-box;
+
+  &__header {
+    width: 100%;
+    margin: 0 0 1.5rem;
+    padding: 0 3rem 0 var(--title-inset);
+    box-sizing: border-box;
+    text-align: left;
+
+    h2 {
+      font-size: clamp(2rem, 4vw, 3rem);
+      margin: 0 0 0.4rem;
+      --gradient-duration: 26s;
+      --gradient-delay: -15s;
+    }
+
+    p {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.75);
+      font-size: 1rem;
+    }
+  }
+
+  &__viewport {
+    width: 100%;
+    overflow: hidden;
+    padding: 0 3rem;
+    box-sizing: border-box;
+    margin: 0;
+  }
+
+  @media (max-width: 900px) {
+    &__header,
+    &__viewport {
+      padding: 0 1.5rem;
+    }
+  }
+
+  &__track {
+    display: flex;
+    gap: 1.25rem;
+    width: max-content;
+    align-items: stretch;
+    will-change: transform;
+    padding-left: 0.25rem;
+  }
+
+  &__card {
+    width: min(24vw, 260px);
+    min-width: min(24vw, 260px);
+
+    @media (max-width: 900px) {
+      width: min(48vw, 280px);
+      min-width: min(48vw, 280px);
+    }
+
+    @media (max-width: 520px) {
+      width: min(72vw, 300px);
+      min-width: min(72vw, 300px);
+    }
+
+    height: 300px;
+    padding: 1.5rem;
+    border-radius: 1.25rem;
+    // Cristal: relleno translúcido con un degradado de luz en diagonal, borde
+    // fino claro y brillo en el canto superior. Debajo del contenido, la luz
+    // (::before).
+    position: relative;
+    isolation: isolate;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.13) 0%, rgba(255, 255, 255, 0.04) 55%, rgba(255, 255, 255, 0.02) 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.04),
+      0 24px 60px rgba(0, 0, 0, 0.35);
+
+    // Luz: una banda con todos los colores ($light-stops) fija a la pantalla,
+    // de la que cada tarjeta muestra el trozo que tiene detrás, así que las
+    // tarjetas vecinas continúan el mismo degradado. --light-x es dónde cae el
+    // borde izquierdo de la pantalla respecto al de la tarjeta (lo miden
+    // placeSection5Light() en index.ts y --light, que anima el timeline), y
+    // además los colores avanzan $light-flow ciclos con el scroll. La máscara
+    // la reparte en tres manchas suaves (tipo aurora) que también se mueven
+    // con el scroll, colocadas distinto en cada tarjeta (--blob-x, abajo). Es
+    // el fondo de cada tarjeta, así que entre tarjetas nunca se ve nada.
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      border-radius: inherit;
+      --light-x: calc(var(--light-x0, 0px) + var(--light, 0) * (var(--light-dx, 0px) + #{$light-flow} * #{$light-cycle}));
+      background: linear-gradient(90deg, $light-stops) var(--light-x) 0 / #{$light-cycle} 100% repeat-x;
+      opacity: 0.15;
+      $blobs:
+        radial-gradient(ellipse 70% 45% at calc(var(--blob-x, 25%) + var(--light, 0) * 40%) 22%, #000 0%, transparent 100%),
+        radial-gradient(ellipse 55% 60% at calc(85% - var(--blob-x, 25%) - var(--light, 0) * 30%) 55%, rgba(0, 0, 0, 0.8) 0%, transparent 100%),
+        radial-gradient(ellipse 80% 35% at calc(var(--blob-x, 25%) + 20% + var(--light, 0) * 20%) 88%, rgba(0, 0, 0, 0.55) 0%, transparent 100%);
+      -webkit-mask: $blobs;
+      mask: $blobs;
+    }
+
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 0.6rem;
+
+    span {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: $color-secondary;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    h3 {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+
+    // Cabecera con los logos de las tecnologías: ocupa todo el hueco sobre el
+    // texto, como la imagen de la tarjeta. Fondo neutro: la luz verde y morada
+    // de la tarjeta se ve a través.
+    .section-5__icons {
+      flex: 1;
+      min-height: 0;
+      margin-bottom: 0.6rem;
+      padding: 1rem;
+      border-radius: 0.9rem;
+      background: rgba(255, 255, 255, 0.03);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.25rem;
+    }
+
+    // Los logos son SVG de Simple Icons (CC0) en public/assets/img/skills,
+    // usados como máscara para teñirlos del azul principal (vienen en negro).
+    // Hasta 6rem; con dos o tres se reparten el ancho y encogen (contain).
+    .section-5__icon {
+      flex: 0 1 6rem;
+      height: 100%;
+      max-height: 6rem;
+      background: $color-primary;
+      -webkit-mask: var(--icon) center / contain no-repeat;
+      mask: var(--icon) center / contain no-repeat;
+    }
+
+    p {
+      margin: 0;
+      line-height: 1.5;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 0.96rem;
+      // Siempre el alto de dos líneas: el contenido se ancla abajo y, si no,
+      // las descripciones de una línea dejaban el número y el título más bajos
+      // que en las tarjetas vecinas.
+      min-height: 3em;
+    }
+  }
+}
+
+// Punto de partida de las manchas de luz de cada tarjeta, para que no se
+// repita la misma forma en todas.
+.section-5__card:nth-child(3n + 1) { --blob-x: 10%; }
+.section-5__card:nth-child(3n + 2) { --blob-x: 35%; }
+.section-5__card:nth-child(3n) { --blob-x: 22%; }

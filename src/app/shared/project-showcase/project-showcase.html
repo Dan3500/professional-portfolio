@@ -5,7 +5,7 @@
         @if (chapter.media.type === 'video') {
           <canvas class="chapter__media" [attr.data-src]="chapter.media.src"></canvas>
         } @else {
-          <img class="chapter__media" [src]="chapter.media.src" alt="" decoding="async" />
+          <img class="chapter__media" [src]="chapter.media.src" alt="" loading="lazy" decoding="async" />
         }
         <div class="chapter__vignette"></div>
         <div class="chapter__dim chapter__dim--enter"></div>

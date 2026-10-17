@@ -25,7 +25,10 @@ export interface ProjectStoryData {
 const image = (name: string): ProjectMedia => ({ src: `assets/img/projects/${name}.jpg`, type: 'image' });
 const video = (name: string): ProjectMedia => ({ src: `assets/video/projects/${name}.mp4`, type: 'video' });
 
-// TODO: reemplazar por vídeos/imágenes y copy reales de cada proyecto. Las
+// TODO: reemplazar por vídeos/imágenes y copy reales de cada proyecto.
+// saas-secondary.mp4 es idéntico a banking-hero.mp4: se usa banking-hero en
+// su lugar para no descargar ni procesar el mismo vídeo dos veces. Cuando
+// tengas el vídeo real del SaaS, sustituye el archivo y vuelve a usarlo aquí. Las
 // galerías reutilizan las imágenes de otros proyectos solo como relleno.
 export const PROJECTS: ProjectStoryData[] = [
   {
@@ -49,10 +52,10 @@ export const PROJECTS: ProjectStoryData[] = [
     descripcion:
       'Panel de control para una herramienta SaaS, con gráficas en tiempo real, gestión de usuarios y permisos, y una arquitectura pensada para que cada equipo vea solo lo que necesita.',
     videoPortada: video('saas-hero'),
-    galeria: [image('saas-secondary-2'), video('saas-secondary'), image('ecommerce-secondary-2'), image('banking-secondary')],
+    galeria: [image('saas-secondary-2'), video('banking-hero'), image('ecommerce-secondary-2'), image('banking-secondary')],
 
     quote: 'Si no se puede medir, no se puede mejorar',
-    mediaQuote: video('saas-secondary'),
+    mediaQuote: video('banking-hero'),
     subtituloQuote: 'Cada equipo, su vista',
     descripcionQuote:
       'Permisos por rol, paneles configurables y métricas que se actualizan solas, sin recargar la página ni perder el contexto.',

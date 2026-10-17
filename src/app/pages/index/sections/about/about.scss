@@ -1,0 +1,100 @@
+@use '../../../../../tokens' as *;
+
+// Variante para los textos de "Who I am" / "Tech lead": menos azul y con el
+// magenta morado en lugar del azul índigo de los títulos, para que el menta y
+// el morado se vean más al recorrerlos.
+$intro-text-sweep: linear-gradient(115deg, #34d399 0%, #34d399 11%, $color-primary 36%, $color-primary 64%, #b83fd9 89%, #b83fd9 100%);
+// El mismo, invertido (morado a la izquierda), para "Tech lead".
+$intro-text-sweep-reverse: linear-gradient(115deg, #b83fd9 0%, #b83fd9 11%, $color-primary 36%, $color-primary 64%, #34d399 89%, #34d399 100%);
+
+// Textos de las secciones 2 y 3: entran con una máscara circular, crecen con
+// el scroll y un degradado de colores muy distintos los recorre: la 2 de menta
+// a morado y la 3 al revés.
+//
+// Se maquetan ya a su tamaño máximo y GSAP los escala de 0.76 a 1 (antes, de
+// 1 a 1.65): con capa propia (will-change) el navegador rasteriza el texto una
+// sola vez a tamaño real y el zoom lo hace la GPU, sin repintar cada fotograma
+// y sin que se vea borroso al ampliarse. Tiene que coincidir con
+// INTRO_TEXT_SCALE en index.ts.
+$intro-text-scale: 1.65;
+
+#section-2,
+#section-3 {
+  position: fixed;
+  // Centrados en el hueco que queda bajo el logo (que acaba arriba, en ~15vh
+  // de alto), no en la pantalla entera: si no, al crecer, el título de dos
+  // líneas de la sección 3 se mete debajo del logo.
+  top: calc(50% + 7vh);
+  left: 50%;
+  width: 80% * $intro-text-scale;
+  // Nunca más ancho que la pantalla (entre ~900 y 1155px se salía por los
+  // lados al llegar a su escala máxima).
+  max-width: min(700px * $intro-text-scale, calc(100vw - 2rem));
+  opacity: 0;
+  font-family: $font-montserrat;
+  will-change: transform, opacity;
+
+  -webkit-mask-image: radial-gradient(circle, black 30%, transparent 70%);
+  mask-image: radial-gradient(circle, black 30%, transparent 70%);
+  -webkit-mask-size: 0vmax 0vmax;
+  mask-size: 0vmax 0vmax;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+
+  @include gradient-text($intro-text-sweep);
+
+  // El tamaño depende también del alto (min con vh): en pantallas bajas el
+  // bloque no cabría en vertical. Calibrado para no cambiar nada a partir de
+  // ~740px de alto.
+  h2 {
+    font-size: clamp(2rem * $intro-text-scale, min(4.1vw * $intro-text-scale, 11.4vh), 3.2rem * $intro-text-scale);
+    margin: 0 0 1rem * $intro-text-scale;
+    line-height: 1.1;
+  }
+
+  p {
+    font-size: clamp(1.15rem * $intro-text-scale, min(2.2vw * $intro-text-scale, 6.4vh), 1.8rem * $intro-text-scale);
+    line-height: 1.5;
+    margin: 0;
+  }
+}
+
+// La posición del degradado la anima GSAP de 0% a 100% en las dos: la 2
+// recorre menta → azul → morado y la 3, con el degradado invertido, lo
+// inverso, morado → azul → menta, empezando con el morado a la izquierda.
+#section-2 {
+  background-position: 0% 50%;
+}
+
+#section-3 {
+  background-image: $intro-text-sweep-reverse;
+  background-position: 0% 50%;
+  text-align: right;
+}
+
+// Al tamaño máximo, por debajo de 900px el 80% se sale de pantalla: aquí
+// baja a un 58% (58% × 1.65 ≈ 96%).
+@media (max-width: 900px) {
+  #section-2,
+  #section-3 {
+    width: 58% * $intro-text-scale;
+  }
+}
+
+// En móvil, letra algo más pequeña (el mínimo de los clamp de arriba sigue
+// siendo grande para una pantalla estrecha), y limitada por el alto para que
+// en móviles bajos el bloque quepa entero bajo el logo.
+@media (max-width: 768px) {
+  #section-2,
+  #section-3 {
+    h2 {
+      font-size: min(1.8rem * $intro-text-scale, 5.6vh);
+    }
+
+    p {
+      font-size: min(1.05rem * $intro-text-scale, 3.3vh);
+    }
+  }
+}

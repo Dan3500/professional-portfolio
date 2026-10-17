@@ -3,7 +3,13 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
 import { MediaOpenEvent, ProjectShowcase } from '../../shared/project-showcase/project-showcase';
+import { waveChars } from '../../shared/text-effects';
 import { PROJECTS, ProjectMedia } from './project-stories.data';
+import { About } from './sections/about/about';
+import { Contact } from './sections/contact/contact';
+import { IntroHero } from './sections/intro-hero/intro-hero';
+import { Skills } from './sections/skills/skills';
+import { WhyMe } from './sections/why-me/why-me';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -11,50 +17,43 @@ gsap.registerPlugin(ScrollTrigger);
 // direcciones del móvil se encoge/expande.
 ScrollTrigger.config({ ignoreMobileResize: true });
 
-interface Project {
-  image: string;
-  title: string;
-  description: string;
-  specs: string[];
-}
+// Escala máxima de los textos de las secciones 2 y 3, que se maquetan ya a ese
+// tamaño y se animan por debajo de 1 (ver $intro-text-scale en about.scss).
+// La máscara circular se amplía en la misma proporción para que se abra igual.
+const INTRO_TEXT_SCALE = 1.65;
+const INTRO_TEXT_MASK_OPEN = `${300 * INTRO_TEXT_SCALE}vmax ${300 * INTRO_TEXT_SCALE}vmax`;
+// Tramo del timeline en que el degradado recorre los textos (en unidades del
+// timeline, desde que empieza a abrirse su máscara).
+const INTRO_COLOR_DELAY = 0.35;
+const INTRO_COLOR_DURATION = 0.8;
+
+// La ola de color de los títulos solo se mueve con el scroll: cada píxel
+// desplazado adelanta (o, subiendo, retrasa) su animación estos milisegundos.
+// Con ciclos de 20-26 s, una pantalla de scroll equivale a ~1 cambio de color.
+const WAVE_MS_PER_PX = 10;
 
 @Component({
   selector: 'app-index',
   templateUrl: './index.html',
   styleUrls: ['./index.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ProjectShowcase],
+  imports: [IntroHero, About, WhyMe, Skills, ProjectShowcase, Contact],
 })
 export class Index implements AfterViewInit, OnDestroy {
-  @ViewChild('particlesCanvas', { static: true }) canvasRef!: ElementRef<HTMLCanvasElement>;
-  @ViewChild('typedText', { static: true }) typedTextRef!: ElementRef<HTMLSpanElement>;
-  @ViewChild('introAvatar', { static: true }) introAvatarRef!: ElementRef<HTMLDivElement>;
-  @ViewChild('introArrow', { static: true }) introArrowRef!: ElementRef<HTMLSpanElement>;
+  @ViewChild(IntroHero, { static: true }) intro!: IntroHero;
   @ViewChild('avatarButton', { static: true }) avatarButtonRef!: ElementRef<HTMLButtonElement>;
   @ViewChild('galleryOverlay', { static: true }) galleryOverlayRef!: ElementRef<HTMLDivElement>;
   @ViewChild('galleryTrack', { static: true }) galleryTrackRef!: ElementRef<HTMLDivElement>;
-  @ViewChild('projectModal', { static: true }) projectModalRef!: ElementRef<HTMLDivElement>;
   @ViewChild('mediaLightbox', { static: true }) mediaLightboxRef!: ElementRef<HTMLDivElement>;
 
-  currentYear = new Date().getFullYear();
-
-  // Typing effect
-  fullText = "Hello! I'm\nDaniel Soltero";
-  typingSpeed = 60;
-  currentText = '';
-  isTyping = true;
-  private readonly highlightText = 'Daniel Soltero';
-  private typingTween: gsap.core.Tween | null = null;
-
-  // Particles canvas
-  private resizeHandler: (() => void) | null = null;
-  private particlesRafId: number | null = null;
-  private drawParticles: (() => void) | null = null;
-  private introVisible = true;
-  private visibilityHandler: (() => void) | null = null;
+  private gradientObserver: IntersectionObserver | null = null;
+  // "Reducir movimiento" del sistema: sin scroll suavizado ni zoom en los
+  // textos de la intro (y en el CSS, sin bucles decorativos).
+  private readonly reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // Smooth scroll + pinned timeline
   private lenis: Lenis | null = null;
+  private lastWaveScroll = 0;
   private scrollTimeline: gsap.core.Timeline | null = null;
   private timelineResizeHandler: (() => void) | null = null;
   private timelineResizeDebounce: ReturnType<typeof setTimeout> | null = null;
@@ -71,29 +70,7 @@ export class Index implements AfterViewInit, OnDestroy {
   private galleryTween: gsap.core.Tween | null = null;
   private galleryKeydownHandler: ((event: KeyboardEvent) => void) | null = null;
 
-  // Projects
-  // E-commerce Platform, SaaS Dashboard y Banking App tienen su propio
-  // bloque cinematográfico (ver projectStories / #section-project-stories);
-  // el resto se queda en este grid compacto.
-  // TODO: reemplazar por los proyectos, imágenes y specs reales.
-  projects: Project[] = [
-    {
-      image: 'assets/img/project-3.jpg',
-      title: 'Marketing Site',
-      description: 'Landing corporativa con animaciones de scroll y formulario de contacto integrado con CRM.',
-      specs: ['Stack: Angular, GSAP, SCSS', 'Animaciones de scroll', 'Integración con CRM', 'SEO optimizado'],
-    },
-    {
-      image: 'assets/img/project-5.jpg',
-      title: 'Real Estate Listings',
-      description: 'Portal de anuncios inmobiliarios con filtros avanzados, mapa interactivo y fichas de propiedad.',
-      specs: ['Stack: Angular, Google Maps API', 'Filtros avanzados de búsqueda', 'Galería de imágenes por propiedad', 'Carga progresiva (lazy loading)'],
-    },
-  ];
   showcaseProjects = PROJECTS;
-  activeProject: Project | null = null;
-  private projectModalTween: gsap.core.Timeline | gsap.core.Tween | null = null;
-  private projectModalKeydownHandler: ((event: KeyboardEvent) => void) | null = null;
 
   activeMedia: ProjectMedia | null = null;
   private mediaOrigin: HTMLElement | null = null;
@@ -105,13 +82,18 @@ export class Index implements AfterViewInit, OnDestroy {
   private menuTween: gsap.core.Timeline | gsap.core.Tween | null = null;
   private menuKeydownHandler: ((event: KeyboardEvent) => void) | null = null;
 
-  constructor(private readonly cdr: ChangeDetectorRef) {}
+  constructor(
+    private readonly cdr: ChangeDetectorRef,
+    private readonly host: ElementRef<HTMLElement>,
+  ) {}
 
   ngAfterViewInit() {
     this.initLenis();
-    this.startTyping();
-    this.initParticles();
     this.timeLine();
+    this.splitWaveTitles();
+    this.alignTitles();
+    document.fonts?.ready.then(() => this.alignTitles());
+    this.observeAnimatedGradients();
 
     // <app-project-showcase> mide su layout en su propio ngAfterViewInit,
     // que Angular ejecuta ANTES que este (los hijos primero). En ese
@@ -128,13 +110,10 @@ export class Index implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.stopTyping();
     this.lenis?.destroy();
     gsap.ticker.remove(this.lenisRaf);
 
-    this.stopParticles();
-    if (this.visibilityHandler) document.removeEventListener('visibilitychange', this.visibilityHandler);
-    if (this.resizeHandler) window.removeEventListener('resize', this.resizeHandler);
+    this.gradientObserver?.disconnect();
     if (this.timelineResizeHandler) window.removeEventListener('resize', this.timelineResizeHandler);
     if (this.timelineResizeDebounce) clearTimeout(this.timelineResizeDebounce);
 
@@ -144,9 +123,6 @@ export class Index implements AfterViewInit, OnDestroy {
     this.galleryTween?.kill();
     if (this.galleryKeydownHandler) window.removeEventListener('keydown', this.galleryKeydownHandler);
 
-    this.projectModalTween?.kill();
-    if (this.projectModalKeydownHandler) window.removeEventListener('keydown', this.projectModalKeydownHandler);
-
     this.mediaLightboxTween?.kill();
     if (this.mediaLightboxKeydownHandler) window.removeEventListener('keydown', this.mediaLightboxKeydownHandler);
 
@@ -154,157 +130,66 @@ export class Index implements AfterViewInit, OnDestroy {
     if (this.menuKeydownHandler) window.removeEventListener('keydown', this.menuKeydownHandler);
   }
 
+  // La ola de color de los títulos (y del nombre de la portada) solo se mueve
+  // con el scroll: sus animaciones están en pausa y aquí se mueve su tiempo en
+  // proporción a lo desplazado. Todas las letras se mueven lo mismo, así que
+  // la forma de la ola se mantiene. Solo las que están en pantalla.
+  private pushWaves = (lenis: Lenis) => {
+    const delta = lenis.scroll - this.lastWaveScroll;
+    this.lastWaveScroll = lenis.scroll;
+    if (!delta) return;
+
+    const containers = document.querySelectorAll<HTMLElement>(
+      this.intro.visible ? '.wave-title.animated-gradient--visible, .intro-title__live' : '.wave-title.animated-gradient--visible',
+    );
+    for (const container of containers) {
+      for (const animation of container.getAnimations({ subtree: true })) {
+        if ((animation as CSSAnimation).animationName !== 'wave-color') continue;
+        const duration = animation.effect?.getComputedTiming().duration as number;
+        let time = (animation.currentTime as number) + delta * WAVE_MS_PER_PX;
+        // Subiendo, que no quede antes del inicio (dejaría de pintarse el color).
+        if (time < 0) time += Math.ceil(-time / duration) * duration;
+        animation.currentTime = time;
+      }
+    }
+  };
+
   private lenisRaf = (time: number) => {
     this.lenis?.raf(time * 1000);
   };
 
   private initLenis() {
-    this.lenis = new Lenis({ lerp: 0.08 });
+    this.lenis = new Lenis({ lerp: this.reduceMotion ? 1 : 0.08 });
     this.lenis.on('scroll', ScrollTrigger.update);
+    this.lenis.on('scroll', this.pushWaves);
     gsap.ticker.add(this.lenisRaf);
     gsap.ticker.lagSmoothing(0);
   }
 
-  private initParticles() {
-    const canvas = this.canvasRef.nativeElement;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-    resize();
-    this.resizeHandler = resize;
-    window.addEventListener('resize', resize);
-
-    const colors = ['#3ec6ff', '#1D4E89', '#0077B6', '#0369a1'];
-    const symbols = ['<', '>', '{', '}', '/', '\\', ';', ':', '=', '+', '*', '$', '#', '@', '%', '&', '!', '?', '^', '~'];
-    const particles = Array.from({ length: 120 }, () => {
-      const size = Math.round(12 + Math.random() * 8);
-      return {
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.35,
-        vy: (Math.random() - 0.5) * 0.35,
-        color: colors[Math.floor(Math.random() * colors.length)],
-        symbol: symbols[Math.floor(Math.random() * symbols.length)],
-        size,
-        font: `${size}px 'Montserrat', monospace`,
-        opacity: 0.55 + Math.random() * 0.35,
-      };
-    }).sort((a, b) => a.size - b.size);
-
-    const draw = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      let currentFont = '';
-      for (const p of particles) {
-        if (p.font !== currentFont) {
-          ctx.font = p.font;
-          currentFont = p.font;
-        }
-        ctx.fillStyle = p.color;
-        ctx.globalAlpha = p.opacity;
-        ctx.fillText(p.symbol, p.x, p.y);
-
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.x < -20 || p.x > canvas.width + 20) p.vx *= -1;
-        if (p.y < -20 || p.y > canvas.height + 20) p.vy *= -1;
-      }
-      ctx.globalAlpha = 1;
-      this.particlesRafId = requestAnimationFrame(draw);
-    };
-
-    this.drawParticles = draw;
-    draw();
-
-    // Detrás del logo ya no se ve nada, así que no vale la pena seguir
-    // dibujando: se para cuando la intro termina de desvanecerse (ver
-    // timeLine) y se retoma si el usuario sube de vuelta al inicio.
-    this.visibilityHandler = () => {
-      if (document.hidden) this.stopParticles();
-      else if (this.introVisible) this.startParticles();
-    };
-    document.addEventListener('visibilitychange', this.visibilityHandler);
-  }
-
-  private stopParticles() {
-    if (this.particlesRafId !== null) {
-      cancelAnimationFrame(this.particlesRafId);
-      this.particlesRafId = null;
-    }
-  }
-
-  private setLogoGradientPaused(paused: boolean) {
-    document.getElementById('mask')?.style.setProperty('animation-play-state', paused ? 'paused' : 'running');
-  }
-
-  private startParticles() {
-    if (this.particlesRafId === null) this.drawParticles?.();
-  }
-
-  private startTyping() {
-    this.stopTyping();
-
-    this.currentText = '';
-    this.isTyping = true;
-    this.cdr.detectChanges();
-
-    const progress = { chars: 0 };
-    const duration = (this.fullText.length * this.typingSpeed) / 1000;
-
-    this.typingTween = gsap.to(progress, {
-      chars: this.fullText.length,
-      duration,
-      delay: 0.7,
-      ease: 'none',
-      snap: { chars: 1 },
-      onUpdate: () => {
-        this.currentText = this.fullText.slice(0, progress.chars);
-        this.renderTypedText();
-      },
-      onComplete: () => this.finishTyping(),
+  // Separa cada título .wave-title (y cada texto .wave-loop) en letras para
+  // la ola de color (ver styles.scss), con el sentido de la ola elegido al
+  // azar para cada uno. El texto completo queda en aria-label (del enlace, si
+  // está dentro de uno) para que los lectores de pantalla no lo lean letra a
+  // letra.
+  private splitWaveTitles() {
+    document.querySelectorAll<HTMLElement>('.wave-title, .wave-loop').forEach((title) => {
+      const text = title.textContent?.trim() ?? '';
+      (title.closest('a') ?? title).setAttribute('aria-label', text);
+      title.innerHTML = waveChars(text, Math.random() < 0.5);
     });
   }
 
-  private finishTyping() {
-    this.isTyping = false;
-    this.stopTyping();
-    this.cdr.detectChanges();
-
-    gsap.fromTo(
-      this.introAvatarRef.nativeElement,
-      { opacity: 0, scale: 0.4, rotationY: 180, transformPerspective: 600 },
-      { opacity: 1, scale: 1, rotationY: 0, duration: 0.9, ease: 'back.out(1.6)' },
-    );
-
-    gsap.to(this.introArrowRef.nativeElement, { opacity: 1, duration: 0.6, delay: 0.9 });
-  }
-
-  private stopTyping() {
-    this.typingTween?.kill();
-    this.typingTween = null;
-  }
-
-  private renderTypedText() {
-    const typedSpan = this.typedTextRef.nativeElement;
-    const highlightStart = this.fullText.indexOf(this.highlightText);
-
-    if (highlightStart !== -1 && this.currentText.length > highlightStart) {
-      const highlightEnd = highlightStart + this.highlightText.length;
-      const safeEnd = Math.min(this.currentText.length, highlightEnd);
-      const before = this.currentText.slice(0, highlightStart);
-      const highlight = this.currentText.slice(highlightStart, safeEnd);
-      const after = this.currentText.slice(safeEnd);
-
-      typedSpan.innerHTML = `${before}<span class='highlight no-shadow' style='color:#3ec6ff;font-weight:700;text-shadow:none;'>${highlight}</span>${after}`;
-    } else {
-      typedSpan.textContent = this.currentText;
-    }
+  // Las olas en bucle (.wave-loop y el botón del CV) repintan en cada
+  // fotograma: solo se animan mientras están en pantalla. A los .wave-title
+  // solo se les marca para que pushWaves sepa cuáles mover.
+  private observeAnimatedGradients() {
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        entry.target.classList.toggle('animated-gradient--visible', entry.isIntersecting);
+      }
+    });
+    document.querySelectorAll('.wave-loop, .wave-title, .section-7__cv').forEach((element) => observer.observe(element));
+    this.gradientObserver = observer;
   }
 
   openGallery() {
@@ -385,52 +270,6 @@ export class Index implements AfterViewInit, OnDestroy {
   private scrollGalleryBy(direction: 1 | -1) {
     const track = this.galleryTrackRef.nativeElement;
     track.scrollBy({ left: track.clientWidth * direction, behavior: 'smooth' });
-  }
-
-  openProject(project: Project) {
-    this.activeProject = project;
-    this.cdr.detectChanges();
-
-    const modal = this.projectModalRef.nativeElement;
-    this.projectModalTween?.kill();
-    gsap.set(modal, { display: 'flex', opacity: 0 });
-    gsap.set('.project-modal__content', { opacity: 0, y: 24, scale: 0.97 });
-
-    this.projectModalTween = gsap.timeline()
-      .to(modal, { opacity: 1, duration: 0.25, ease: 'power1.out' })
-      .to('.project-modal__content', { opacity: 1, y: 0, scale: 1, duration: 0.35, ease: 'power2.out' }, '<');
-
-    document.body.style.overflow = 'hidden';
-    this.lenis?.stop();
-
-    this.projectModalKeydownHandler = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') this.closeProject();
-    };
-    window.addEventListener('keydown', this.projectModalKeydownHandler);
-  }
-
-  closeProject() {
-    if (!this.activeProject) return;
-
-    const modal = this.projectModalRef.nativeElement;
-    this.projectModalTween?.kill();
-    this.projectModalTween = gsap.to(modal, {
-      opacity: 0,
-      duration: 0.25,
-      ease: 'power1.in',
-      onComplete: () => {
-        gsap.set(modal, { display: 'none' });
-        this.activeProject = null;
-      },
-    });
-
-    document.body.style.overflow = '';
-    this.lenis?.start();
-
-    if (this.projectModalKeydownHandler) {
-      window.removeEventListener('keydown', this.projectModalKeydownHandler);
-      this.projectModalKeydownHandler = null;
-    }
   }
 
   openMedia({ media, origin }: MediaOpenEvent) {
@@ -636,6 +475,16 @@ export class Index implements AfterViewInit, OnDestroy {
     window.scrollTo({ top: targetY, behavior: 'smooth' });
   }
 
+  // Alinea los títulos de "Habilidades" y "Let's talk" con el de "¿Por qué
+  // yo?" midiendo dónde empieza este (va centrado junto a su lista, así que
+  // su posición depende del ancho de la ventana y de la longitud del título).
+  // En móvil esas secciones usan su propio margen y la variable no se usa.
+  private alignTitles() {
+    const reference = document.querySelector('#section-4 h2');
+    if (!reference) return;
+    this.host.nativeElement.style.setProperty('--title-inset', `${reference.getBoundingClientRect().left}px`);
+  }
+
   private rebuildTimeline() {
     this.scrollTimeline?.scrollTrigger?.kill();
     this.scrollTimeline?.kill();
@@ -648,6 +497,7 @@ export class Index implements AfterViewInit, OnDestroy {
     );
 
     this.timeLine();
+    this.alignTitles();
     ScrollTrigger.refresh();
   }
 
@@ -658,7 +508,10 @@ export class Index implements AfterViewInit, OnDestroy {
     gsap.set('#section-2', { maskSize: '0vmax 0vmax', xPercent: -50, yPercent: -50, visibility: 'hidden' });
     gsap.set('#section-3', { maskSize: '0vmax 0vmax', xPercent: -50, yPercent: -50, visibility: 'hidden' });
     gsap.set('#section-4', { opacity: 0, y: '100vh', '--edge-fade': 0 });
-    gsap.set('#section-5', { opacity: 0, y: '100vh' });
+    // yPercent -50 explícito: su CSS lo centra con translateY(-50%), y GSAP solo
+    // lo conserva si adivina que es un centrado (desplazamiento == mitad exacta
+    // de la altura, redondeada), lo que falla cuando la altura tiene decimales.
+    gsap.set('#section-5', { opacity: 0, y: '100vh', yPercent: -50 });
     gsap.set('.section-5__header', { y: '40px', opacity: 0 });
 
     const section4ContentTravel = this.measureSection4Travel();
@@ -667,7 +520,8 @@ export class Index implements AfterViewInit, OnDestroy {
     // Hay que medir el carrusel en reposo, antes de aplicar el xPercent:25
     // inicial (si no, la medida saldría desplazada por ese mismo transform).
     const { endXPercent: section5TrackEndXPercent, duration: section5TrackDuration } = this.measureSection5Track();
-    gsap.set('.section-5__track', { xPercent: 25 });
+    this.placeSection5Light(section5TrackEndXPercent);
+    gsap.set('.section-5__track', { xPercent: 25, '--light': 0 });
 
     const tl = gsap.timeline({
       scrollTrigger: {
@@ -691,42 +545,29 @@ export class Index implements AfterViewInit, OnDestroy {
         opacity: 0,
         ease: 'power2.out',
         duration: 2.2,
-        onStart: () => this.setLogoGradientPaused(false),
-        onComplete: () => {
-          this.introVisible = false;
-          this.stopParticles();
-        },
-        onReverseComplete: () => {
-          this.introVisible = true;
-          this.startParticles();
-          this.setLogoGradientPaused(true);
-        },
+        onStart: () => this.intro.setLogoGradientRunning(true),
+        onComplete: () => this.intro.hide(),
+        onReverseComplete: () => this.intro.show(),
       }, '<0.6')
 
-      .to('#section-2', { maskSize: '300vmax 300vmax', opacity: 1, visibility: 'visible', ease: 'power2.out', duration: 1.1 }, '>-1.2')
+      .to('#section-2', { maskSize: INTRO_TEXT_MASK_OPEN, opacity: 1, visibility: 'visible', ease: 'power2.out', duration: 1.1 }, '>-1.2')
       .addLabel('section2Start', '<')
-      .fromTo('#section-2', { scale: 1.25 }, {
-        '--sec2-c1': '#34d399',
-        '--sec2-c2': '#1d95ff',
-        '--sec2-c3': '#22d3ee',
-        scale: 1.65,
-        ease: 'none',
-        duration: 1.6,
-      }, '<')
-      .to('#section-2', { maskSize: '0vmax 0vmax', opacity: 0, ease: 'power2.in', duration: 0.8 }, '<+=0.65')
+      // Donde aterriza el menú: el texto ya entero y aún sin desvanecerse.
+      .addLabel('section2Visible', 'section2Start+=0.7')
+      .fromTo('#section-2', { scale: this.reduceMotion ? 1 : 1.25 / INTRO_TEXT_SCALE }, { scale: 1, ease: 'none', duration: 1.6 }, 'section2Start')
+      // Menta → azul → morado, solo mientras el texto se ve opaco: arranca con
+      // la máscara ya casi abierta y termina cuando el fade de salida empieza
+      // a notarse. Si no, el primer y el último color pasan semitransparentes.
+      .to('#section-2', { backgroundPosition: '100% 50%', ease: 'none', duration: INTRO_COLOR_DURATION }, `section2Start+=${INTRO_COLOR_DELAY}`)
+      .to('#section-2', { maskSize: '0vmax 0vmax', opacity: 0, ease: 'power2.in', duration: 0.8 }, 'section2Start+=0.65')
 
-      .to('#section-3', {
-        '--sec3-c1': '#f59e0b',
-        '--sec3-c2': '#ef4444',
-        '--sec3-c3': '#a855f7',
-        maskSize: '300vmax 300vmax',
-        opacity: 1,
-        visibility: 'visible',
-        ease: 'power2.out',
-        duration: 1.1,
-      }, '>')
-      .fromTo('#section-3', { scale: 1.25 }, { scale: 1.65, ease: 'none', duration: 1.6 }, '<')
-      .to('#section-3', { maskSize: '0vmax 0vmax', opacity: 0, ease: 'power2.in', duration: 0.8 }, '<+=0.65')
+      .to('#section-3', { maskSize: INTRO_TEXT_MASK_OPEN, opacity: 1, visibility: 'visible', ease: 'power2.out', duration: 1.1 }, '>')
+      .addLabel('section3Start', '<')
+      .fromTo('#section-3', { scale: this.reduceMotion ? 1 : 1.25 / INTRO_TEXT_SCALE }, { scale: 1, ease: 'none', duration: 1.6 }, 'section3Start')
+      // Con el degradado invertido: morado → azul → menta, con el mismo tramo
+      // opaco que la sección 2.
+      .to('#section-3', { backgroundPosition: '100% 50%', ease: 'none', duration: INTRO_COLOR_DURATION }, `section3Start+=${INTRO_COLOR_DELAY}`)
+      .to('#section-3', { maskSize: '0vmax 0vmax', opacity: 0, ease: 'power2.in', duration: 0.8 }, 'section3Start+=0.65')
 
       .to('#section-4', { opacity: 1, y: '0vh', ease: 'power2.out', duration: 1.2 }, '<+=0.55')
       .addLabel('s4Settled')
@@ -741,7 +582,13 @@ export class Index implements AfterViewInit, OnDestroy {
       .to('#section-5', { opacity: 1, y: '0vh', ease: 'power2.out', duration: 0.9 }, '>-0.6')
       .addLabel('s5Opaque')
       .to('.section-5__header', { y: 0, opacity: 1, ease: 'power2.out', duration: 0.5 }, 's5Opaque-=0.9')
-      .to('.section-5__track', { xPercent: section5TrackEndXPercent, ease: 'none', duration: section5TrackDuration }, 's5Opaque-=0.9')
+      // El carrusel arranca desplazado (xPercent 25) y entra deslizándose con
+      // el panel; arranca justo a tiempo para que la tarjeta 01 llegue a su
+      // sitio (xPercent 0) cuando el panel termina de entrar (s5Opaque, donde
+      // aterriza el menú), y desde ahí sigue avanzando con el scroll.
+      // --light: avance de 0 a 1 de la luz que recorre las tarjetas (ver placeSection5Light).
+      .to('.section-5__track', { xPercent: section5TrackEndXPercent, '--light': 1, ease: 'none', duration: section5TrackDuration },
+        `s5Opaque-=${(section5TrackDuration * 25) / (25 - section5TrackEndXPercent)}`)
 
       .to('.avatar-button', { opacity: 1, pointerEvents: 'auto', ease: 'power1.out', duration: 0.4 }, 'section2Start')
       .to('.menu-toggle', { opacity: 1, pointerEvents: 'auto', ease: 'power1.out', duration: 0.4 }, '<');
@@ -763,6 +610,24 @@ export class Index implements AfterViewInit, OnDestroy {
   // la última tarjeta llegue justo al borde del viewport, sin hueco vacío)
   // y cuánto debe durar el recorrido (más lento cuantas menos tarjetas
   // quepan a la vez en pantalla, para que no pasen demasiado rápido en móvil).
+  // La luz de las tarjetas (skills.scss) es una banda de colores fija a la
+  // pantalla: cada tarjeta pinta en su fondo el trozo que tiene detrás. Para
+  // eso necesita saber dónde cae el borde izquierdo de la pantalla respecto
+  // al suyo, que es x0 + --light * dx (en px): x0 con el carrusel al inicio
+  // (xPercent 25) y dx lo que se desplaza hasta endXPercent. Se mide en
+  // reposo, antes de aplicar ningún xPercent.
+  private placeSection5Light(endXPercent: number) {
+    const track = document.querySelector<HTMLElement>('.section-5__track');
+    if (!track) return;
+
+    const trackWidth = track.getBoundingClientRect().width;
+    const startShift = 0.25 * trackWidth;
+    track.style.setProperty('--light-dx', `${((25 - endXPercent) / 100) * trackWidth}px`);
+    track.querySelectorAll<HTMLElement>('.section-5__card').forEach((card) => {
+      card.style.setProperty('--light-x0', `${-card.getBoundingClientRect().left - startShift}px`);
+    });
+  }
+
   private measureSection5Track(): { endXPercent: number; duration: number } {
     const track = document.querySelector('.section-5__track');
     const viewport = document.querySelector('.section-5__viewport');
